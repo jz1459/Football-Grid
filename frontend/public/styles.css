@@ -1,0 +1,32 @@
+body {
+    margin: 20px
+}
+
+.block {
+    background: #fff;
+    border: 1px solid #999;
+    float: left;
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 34px;
+    height: 50px;
+    width: 50px;
+    padding: 0;
+    text-align: center;
+    margin-top: -1px;
+    margin-right: -1px;
+}
+
+.App {
+    display: flex;
+    flex-direction: row;
+}
+
+/* .button {
+    height: 40px;
+    width: 100px;
+} */
+
+/* .App input {
+    height: 20px;
+} */
