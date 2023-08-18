@@ -2,8 +2,8 @@ body {
     margin: 20px
 }
 
-.block {
-    background: #fff;
+/* .block {
+    background: black;
     border: 1px solid #999;
     float: left;
     font-size: 24px;
@@ -15,7 +15,7 @@ body {
     text-align: center;
     margin-top: -1px;
     margin-right: -1px;
-}
+} */
 
 .App {
     display: flex;
