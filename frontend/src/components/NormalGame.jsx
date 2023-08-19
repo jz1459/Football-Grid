@@ -15,16 +15,31 @@ function NormalGame() {
         margin: '20px auto',
     };
 
-    console.log(Roster["Jon Feliciano (OL)"])
+    console.log(Roster["Jon Feliciano (OL)"].includes("Bills"))
+
+    const [userInput, setUserInput] = useState("");
 
     const handleClick = i => {
         const boardCopy = [...board];
         // if sqaure is occupied or game is over, return
         if (winner || boardCopy[i]) return;
         // Fill the square
+        const x = Math.floor(i / 3);
+        const y = i - (3 * x);
+        // Open up the input screen (popup modal)
+
+        const values = Roster[userInput];
+        if (Roster[userInput].includes(triviaRow[y] && Roster[userInput].includes(triviaColumn[x]))) {
+            boardCopy[i] = xIsNext ? 'X' : 'O';
+            setBoard(boardCopy);
+            setXisNext(!xIsNext);
+        } else {
+            return;
+        }
         boardCopy[i] = xIsNext ? 'X' : 'O';
         setBoard(boardCopy);
         setXisNext(!xIsNext);
+
     };
 
     const startGame = () => {
