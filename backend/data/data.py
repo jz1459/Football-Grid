@@ -4,6 +4,7 @@ import pandas as pd
 from bs4 import BeautifulSoup, Comment
 import time
 import re
+import json
 
 class MyDict(dict): #class to allow us to define the default return value if our positions dictionary doesn't have that particular combo
     def __missing__(self, key):
@@ -56,8 +57,11 @@ def roster_scrape():
     #         newKey = ''.join(re.findall("(.*?)\s*\(", i)) + " (" + positions[pos] + ")"
     #         finalDf['Player-pos'].replace(([i], newKey))
     finalDf = finalDf.groupby('Player-pos')['Team'].apply(list).to_dict() #convert the df to a dictionary for quick O(1) searching
-    print(finalDf)
-        
+    # print(finalDf)
+    with open('roster.json', 'w') as f:
+        json.dump(finalDf, f)
+    # output = json.dumps(finalDf, sort_keys=True, separators=(' ', ':'))
+    # print(output)
 roster_scrape()
 
 
