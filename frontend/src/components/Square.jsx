@@ -1,6 +1,6 @@
 import React from "react";
 
-function Square(props) {
+function Square({value, handleClick}) {
     const style = {
         background: "lightblue",
         border: "2px solid darkblue",
@@ -11,8 +11,8 @@ function Square(props) {
     };
     
     return (
-        <button className="block" style={style} onClick={props.handleClick}>
-            {props.value}
+        <button className="block" style={style} onClick={handleClick}>
+            {value}
         </button>
     );
 };
