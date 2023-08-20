@@ -1,27 +1,141 @@
-body {
-    margin: 20px
+/* Custom Font Styles */
+@font-face {
+    font-family: Centra;
+    src: url('./fonts/CentraNo2-Bold.ttf');
+    font-weight: 700;
 }
 
-/* .block {
-    background: black;
-    border: 1px solid #999;
-    float: left;
-    font-size: 24px;
-    font-weight: bold;
-    line-height: 34px;
-    height: 50px;
-    width: 50px;
+@font-face {
+    font-family: Centra;
+    src: url('./fonts/CentraNo2-Medium.ttf');
+    font-weight: 500;
+}
+
+@font-face {
+    font-family: Centra;
+    src: url('./fonts/CentraNo2-Book.ttf');
+    font-weight: 400;
+}
+/* End of Custom Font Styles */
+
+/* Default CSS */
+* {
+    margin: 0;
     padding: 0;
-    text-align: center;
-    margin-top: -1px;
-    margin-right: -1px;
-} */
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 75px;
+}
+
+body {
+    font-weight: 400;
+    overflow-x: hidden;
+    position: relative;
+    background-color: #303030 !important;
+    color: #fff !important;
+    font-family: 'Centra', sans-serif !important;
+}
 
 .App {
     display: flex;
     flex-direction: row;
 }
 
+/* End of Default CSS */
+
+/* Game CSS */
+.game {
+    position: relative;
+    padding-top: 15vh;
+    background-position: top center;
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+
+.game .container {
+    text-align: center;
+    height: 77vh;
+    padding-left: 35vw;
+}
+
+.message p{
+    font-size: 30px;
+    font-weight: 700;
+    color: aqua;
+}
+
+.message .start-game {
+    font-weight: 700;
+    color: #fff;
+    border: 1px solid #fff;
+    padding: 18px 34px;
+    font-size: 30px;
+    position: relative;
+    background-color: transparent;
+    transition: 0.3s ease-in-out;
+    text-decoration: none;
+}
+
+.message .start-game::before {
+    content: "";
+    width: 0%;
+    height: 100%;
+    position: absolute;
+    background-color: #fff;
+    left: 0;
+    top: 0;
+    z-index: -1;
+    transition: 0.3s ease-in-out;
+}
+
+.message .start-game:hover {
+    color: #121212;
+    text-shadow: none;
+}
+
+.message .start-game:hover::before {
+    content: "";
+    width: 100%;
+    height: 100%;
+    position: absolute;
+}
+
+.title {
+    font-size: 30px;
+    font-weight: 700;
+}
+
+/* End of Game CSS */
+
+/* Trivia CSS */
+.trivia-col {
+    position: relative;
+    font-size: 25px;
+}
+
+.trivia-row {
+    border: '4px solid black';
+    border-radius: '10px';
+    width: '200px';
+    height: '200px';
+    margin: '0 auto';
+    display: 'grid';
+    grid-template-columns: 'repeat(3, 1fr)';
+}
+
+.trivia {
+    border: '4px solid black';
+    border-radius: '10px';
+    width: '200px';
+    height: '200px';
+    margin: '0 auto';
+    display: 'grid';
+    grid-template-columns: 'repeat(3, 1fr)';
+}
+/* End of Trivia CSS */
 /* .button {
     height: 40px;
     width: 100px;

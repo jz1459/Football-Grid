@@ -22,9 +22,7 @@ function PlayerSearch({ show, onClose, handleSearch, userInput, search, data}) {
             </Modal.Header>
             <Modal.Body>
                 <div className="search-bar">
-                    {/* <form className="player-search" onSubmit={e => { e.preventDefault(); }}> */}
                     <input type="text" name="player" placeholder="Enter Player Name" value={userInput} onChange={(event) => handleSearch(event)} />
-                    {/* </form> */}
                     <button onClick={() => { handleCLick() }}>Enter</button>
                 </div>
             </Modal.Body>

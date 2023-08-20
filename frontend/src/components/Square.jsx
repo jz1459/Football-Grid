@@ -3,7 +3,7 @@ import React from "react";
 function Square({value, handleClick}) {
     const style = {
         background: "lightblue",
-        border: "2px solid darkblue",
+        border: "2px solid black",
         fontSize: "30px",
         fontWeight: "800",
         cursor: "pointer",
@@ -11,7 +11,7 @@ function Square({value, handleClick}) {
     };
     
     return (
-        <button className="block" style={style} onClick={handleClick}>
+        <button className="square" style={style} onClick={handleClick}>
             {value}
         </button>
     );

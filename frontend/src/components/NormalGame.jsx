@@ -11,13 +11,6 @@ function NormalGame() {
     const [xIsNext, setXisNext] = useState(true);
     const winner = calculateWinner(board);
 
-    const styles = {
-        width: '200px',
-        margin: '20px auto',
-    };
-
-    // console.log(Roster["Jon Feliciano (OL)"].includes("Bills"))
-
     const [userInput, setUserInput] = useState("");
     const [modalData, setModalData] = useState(null);
     const showModal = (i) => setModalData(i);
@@ -31,44 +24,31 @@ function NormalGame() {
         const boardCopy = [...board];
         // if sqaure is occupied or game is over, return
         if (winner || boardCopy[i]) return;
-        // Fill the square
+
+        // Grab the trivia parameter indexes
         const x = Math.floor(i / 3);
         const y = i - (3 * x);
-        console.log(userInput);
-        console.log(x);
-        console.log(y);
-        console.log(i);
+
+        // Fill the square if the value is right
         if (userInput.length !== 0) {
             console.log(userInput.length);
             const values = Roster[userInput];
-            // console.log(values);
-            // console.log(values.includes(triviaRow[y]));
-            // console.log(values.includes(triviaColumn[x]));
-            // console.log(triviaColumn);
-            // console.log(triviaColumn[x]);
-            // console.log(triviaRow[y]);
             if (values && values.includes(triviaRow[y]) && values.includes(triviaColumn[x])) {
                 boardCopy[i] = xIsNext ? 'X' : 'O';
                 setBoard(boardCopy);
                 setXisNext(!xIsNext);
                 setUserInput("");
             } else {
-                console.log("hi");
+                alert("Incorrect Answer!");
                 setUserInput("");
                 return;
             }
         }
-        //  boardCopy[i] = xIsNext ? 'X' : 'O';
-        //         setBoard(boardCopy);
-        //         setXisNext(!xIsNext);
-
     };
 
 
     const handleClick = i => {
         showModal(i);
-        // checkPlayer(i);
-        setUserInput("");
     };
 
     const startGame = () => {
@@ -78,7 +58,7 @@ function NormalGame() {
     };
 
     const renderMoves = () => {
-        return <button onClick={() => startGame()}>
+        return <button className = "start-game" onClick={() => startGame()}>
             Start Game
         </button>
     };
@@ -101,52 +81,56 @@ function NormalGame() {
     const length = teams.length;
 
     const fillTrivia = () => {
-        setTriviaRow(["Bills", "Bills", "Bills"]);
-        setTriviaColumn(["Giants", "Giants", "Giants"]);
-        // var usedRow = [];
-        // var usedCol = [];
-        // var usedIndexes = [];
-        // while (usedIndexes.length < 6) {
-        //     var index = Math.floor(Math.random() * length);
-        //     if (usedIndexes.indexOf(index) === -1) {
-        //         usedIndexes.push(index)
-        //         if (usedIndexes.length < 4) {
-        //             usedRow.push(teams[index])
-        //         } else {
-        //             usedCol.push(teams[index])
-        //         }
-        //     }  
-        // };
-        // setTriviaRow(usedRow);
-        // setTriviaColumn(usedCol);
+        // setTriviaRow(["Bills", "Bills", "Bills"]);
+        // setTriviaColumn(["Giants", "Giants", "Giants"]);
+        var usedRow = [];
+        var usedCol = [];
+        var usedIndexes = [];
+        while (usedIndexes.length < 6) {
+            var index = Math.floor(Math.random() * length);
+            if (usedIndexes.indexOf(index) === -1) {
+                usedIndexes.push(index)
+                if (usedIndexes.length < 4) {
+                    usedRow.push(teams[index])
+                } else {
+                    usedCol.push(teams[index])
+                }
+            }  
+        };
+        setTriviaRow(usedRow);
+        setTriviaColumn(usedCol);
     };
 
     return (
-        <div className='board'>
-            <Container>
-                {modalData && (<PlayerSearch show={modalData} userInput={userInput} onClose={hideModal} handleSearch={handleSearch} search = {checkPlayer} data = {modalData} />)}
-                {/* <input type="text" name="player" placeholder="Enter Player Name" value={userInput} onChange={(event) => setUserInput(event.target.value)} /> */}
-                <Row>
-                    <Col>
+        <section className='game' id='game'>
+            <div>
+                <Container>
+                    <div className='title'>
                         Football Tic Tac Toe
-                    </Col>
-                    <Col>
-                        <div className='trivia-row' style={triviaStyle}>{triviaRow}</div>
-                    </Col></Row>
-                <Row>
-                    <Col>
-                        <div className='trivia-col'><TriviaCategories arr={triviaColumn} /></div>
-                    </Col>
-                    <Col>
-                        <NormalBoard squares={board} onClick={handleClick} />
-                        <div style={styles}>
-                            <p>{winner ? 'Winner: ' + winner : 'Next Player: ' + (xIsNext ? 'X' : 'O')}</p>
-                            {renderMoves()}
-                        </div>
-                    </Col>
-                </Row>
-            </Container>
-        </div>
+                    </div>
+                    {modalData && (<PlayerSearch show={modalData} userInput={userInput} onClose={hideModal} handleSearch={handleSearch} search={checkPlayer} data={modalData} />)}
+                    <Row>
+                        <Col>
+                        </Col>
+                        <Col>
+                            <div className='trivia-row'>{triviaRow}</div>
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col xl={6}>
+                            <div className='trivia-col'><TriviaCategories arr={triviaColumn} /></div>
+                        </Col>
+                        <Col xl={6}>
+                            <NormalBoard squares={board} onClick={handleClick} />
+                            <div className='message'>
+                                <p>{winner ? 'Winner: ' + winner : 'Next Player: ' + (xIsNext ? 'X' : 'O')}</p>
+                                {renderMoves()}
+                            </div>
+                        </Col>
+                    </Row>
+                </Container>
+            </div>
+        </section>
     );
 };
 

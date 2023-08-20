@@ -5,11 +5,11 @@ function NormalBoard({squares, onClick}) {
     const styles = {
         border: '4px solid black',
         borderRadius: '10px',
-        width: '250px',
-        height: '250px',
+        width: '600px',
+        height: '600px',
         margin: '0 auto',
         display: 'grid',
-        gridTemplate: 'repeat(3, 1fr) / repeat(3, 1fr)'
+        gridTemplate: 'repeat(3, 1fr) / repeat(3, 1fr)',
     };
 
     return (
