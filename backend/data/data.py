@@ -17,7 +17,7 @@ team_names = {"buf": "Bills", "mia": "Dolphins", "nwe": "Patriots", "nyj": "Jets
 names = {"nyg": "Giants", "buf": "Bills"}
 
 positions = {"QB": "QB", "RB": "RB", "FB": "FB", "WR": "WR", "TE": "TE", "WR/QB": "QB", "DT/FB": "FB",
-             "LT": "OL", "T": "OL", "LG": "OL", "G": "OL", "C": "OL", "RG": "OL", "RT": "OL", "LG/LT": "OL", "RG/RT": "OL", "LT/RT": "OL", "LG/RG": "OL", "RT/LT": "OL", "RG/LG": "OL", "OL": "OL", "OG": "OL", "OT": "OL", "G/C": "OL", "T/G": "OL", "C/RG": "OL", "LT/LG": "OL", "T/TE": "OL", "LG/C": "OL", "RG/C": "OL", "RT/RG": "OL", "RT/LG": "OL", "G/T": "OL", "C/LG": "OL",
+             "LT": "OL", "T": "OL", "LG": "OL", "G": "OL", "C": "OL", "RG": "OL", "RT": "OL", "LG/LT": "OL", "RG/RT": "OL", "LT/RT": "OL", "LG/RG": "OL", "RT/LT": "OL", "RG/LG": "OL", "OL": "OL", "OG": "OL", "OT": "OL", "G/C": "OL", "T/G": "OL", "C/RG": "OL", "LT/LG": "OL", "T/TE": "OL", "LG/C": "OL", "RG/C": "OL", "RT/RG": "OL", "RT/LG": "OL", "G/T": "OL", "C/LG": "OL", "LG/RT": "OL",
              "LDE": "DL", "DE": "DL", "DL": "DL", "LDT": "DL", "NT": "DL", "DT": "DL", "RDT": "DL", "RDE": "DL", "LDE/RDE": "DL", "RDE/LDE": "DL", "DT/NT": "DL", "NT/DT": "DL", "RDE/NT": "DL", "LDE/NT": "DL", "LDT/LDE": "DL", "RDT/RDE": "DL", "DT/DE": "DL",
              "LDE/DT": "DL", "RDE/DT": "DL", "DE/DT": "DL", "LDT/RDT": "DL", "RDT/LDT": "DL", "LDE/LDT": "DL", "RDE/RDT": "DL", "RDE/LDT": "DL", "RDE/LOLB": "DL", "RDT/LDE": "DL",
              "LLB": "LB", "MLB": "LB", "LB": "LB", "OLB": "LB", "RLB": "LB", "LOLB": "LB", "ROLB": "LB", "LILB": "LB", "RILB": "LB", "ROLB/LOLB": "LB", "LOLB/ROLB": "LB", "LILB/RILB": "LB", "RILB/LILB": "LB", "ROLB/LILB": "LB", "RLB/MLB": "LB",  "LLB/MLB": "LB", "ROLB/RILB": "LB", "RLB/LDE": "LB", "LLB/RLB": "LB", "MLB/RLB": "LB", "RLB/LLB": "LB",
@@ -48,7 +48,7 @@ def roster_scrape():
                             playerDict.append(result) #add this team, year to the final output
                         except:
                             continue
-            time.sleep(10) #prevent the website from blocking us due to too many requests at once
+            time.sleep(8) #prevent the website from blocking us due to too many requests at once
     finalDf = pd.concat(playerDict) #convert the final output to a df
     finalDf = finalDf.drop_duplicates() #remove any duplicates we have from players between the years
     # for i in finalDf['Player-pos']:

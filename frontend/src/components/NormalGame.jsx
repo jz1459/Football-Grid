@@ -9,18 +9,28 @@ import PlayerSearch from './PlayerSearch';
 function NormalGame() {
     const [board, setBoard] = useState(Array(9).fill(null));
     const [xIsNext, setXisNext] = useState(true);
+    const [newGame, setNewGame] = useState(false);
     const winner = calculateWinner(board);
 
     const [userInput, setUserInput] = useState("");
     const [modalData, setModalData] = useState(null);
-    const showModal = (i) => setModalData(i);
-    const hideModal = () => setModalData(null);
+    const [show, setShow] = useState(false);
+    const showModal = (i) => {
+        if (!winner && newGame === true) {
+            setModalData(i);
+            setShow(true);
+        }
+    };
+
+    const hideModal = () => {
+        setModalData(null);
+        setShow(false);
+    }
     const handleSearch = (event) => {
         setUserInput(event.target.value);
     };
 
-
-    const checkPlayer = i => {
+    const checkPlayer = (i) => {
         const boardCopy = [...board];
         // if sqaure is occupied or game is over, return
         if (winner || boardCopy[i]) return;
@@ -47,19 +57,16 @@ function NormalGame() {
     };
 
 
-    const handleClick = i => {
-        showModal(i);
-    };
-
     const startGame = () => {
         setBoard(Array(9).fill(null));
+        setNewGame(true);
         setXisNext(true);
         fillTrivia();
     };
 
     const renderMoves = () => {
         return <button className = "start-game" onClick={() => startGame()}>
-            Start Game
+            {newGame ? "New Game" : "Start Game"}
         </button>
     };
 
@@ -68,16 +75,6 @@ function NormalGame() {
     const teams = ["Bills", "Dolphins", "Patriots", "Jets", "Bengals", "Ravens", "Steelers", "Browns", "Eagles", "Cowboys", "Giants", "Commanders",
             "Vikings", "Lions", "Packers", "Bears", "49ers", "Seahawks", "Rams", "Cardinals", "Buccaneers", "Panthers", "Saints", "Falcons", 
             "Chiefs", "Chargers", "Raiders", "Broncos", "Jaguars", "Titans", "Colts", "Texans"]
-
-    const triviaStyle = {
-        background: "lightblue",
-        border: "2px solid darkblue",
-        fontSize: "30px",
-        fontWeight: "800",
-        cursor: "pointer",
-        outline: "none",
-    };
-
     const length = teams.length;
 
     const fillTrivia = () => {
@@ -104,24 +101,25 @@ function NormalGame() {
     return (
         <section className='game' id='game'>
             <div>
+                {console.log(modalData)}
                 <Container>
-                    <div className='title'>
-                        Football Tic Tac Toe
+                    <div className='proj-modal'>
+                        {show && (<PlayerSearch show={show} userInput={userInput} onClose={hideModal} handleSearch={handleSearch} checkPlayer={checkPlayer} modalData={modalData} />)}
                     </div>
-                    {modalData && (<PlayerSearch show={modalData} userInput={userInput} onClose={hideModal} handleSearch={handleSearch} search={checkPlayer} data={modalData} />)}
                     <Row>
-                        <Col>
-                        </Col>
-                        <Col>
-                            <div className='trivia-row'>{triviaRow}</div>
-                        </Col>
+                        <div className='title'>
+                            <h1>Football Tic Tac Toe</h1>
+                        </div>
                     </Row>
                     <Row>
-                        <Col xl={6}>
+                        <div className='trivia-row'><TriviaCategories arr={triviaRow} /></div>
+                    </Row>
+                    <Row>
+                        <Col xl={5}>
                             <div className='trivia-col'><TriviaCategories arr={triviaColumn} /></div>
                         </Col>
-                        <Col xl={6}>
-                            <NormalBoard squares={board} onClick={handleClick} />
+                        <Col xl={7}>
+                            <NormalBoard squares={board} onClick={(i) => {showModal(i)}} />
                             <div className='message'>
                                 <p>{winner ? 'Winner: ' + winner : 'Next Player: ' + (xIsNext ? 'X' : 'O')}</p>
                                 {renderMoves()}
