@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import NormalBoard from './NormalBoard';
 import { calculateWinner } from '../NormalWinner';
 import Roster from '../data/roster.json';
-import { Container, Row, Col } from "react-bootstrap";
+import { Container, Row, Col} from "react-bootstrap";
 import TriviaCategories from './TriviaCategories';
+import PlayerSearch from './PlayerSearch';
 
 function NormalGame() {
     const [board, setBoard] = useState(Array(9).fill(null));
@@ -15,31 +16,59 @@ function NormalGame() {
         margin: '20px auto',
     };
 
-    console.log(Roster["Jon Feliciano (OL)"].includes("Bills"))
+    // console.log(Roster["Jon Feliciano (OL)"].includes("Bills"))
 
     const [userInput, setUserInput] = useState("");
+    const [modalData, setModalData] = useState(null);
+    const showModal = (i) => setModalData(i);
+    const hideModal = () => setModalData(null);
+    const handleSearch = (event) => {
+        setUserInput(event.target.value);
+    };
 
-    const handleClick = i => {
+
+    const checkPlayer = i => {
         const boardCopy = [...board];
         // if sqaure is occupied or game is over, return
         if (winner || boardCopy[i]) return;
         // Fill the square
         const x = Math.floor(i / 3);
         const y = i - (3 * x);
-        // Open up the input screen (popup modal)
-
-        const values = Roster[userInput];
-        if (Roster[userInput].includes(triviaRow[y] && Roster[userInput].includes(triviaColumn[x]))) {
-            boardCopy[i] = xIsNext ? 'X' : 'O';
-            setBoard(boardCopy);
-            setXisNext(!xIsNext);
-        } else {
-            return;
+        console.log(userInput);
+        console.log(x);
+        console.log(y);
+        console.log(i);
+        if (userInput.length !== 0) {
+            console.log(userInput.length);
+            const values = Roster[userInput];
+            // console.log(values);
+            // console.log(values.includes(triviaRow[y]));
+            // console.log(values.includes(triviaColumn[x]));
+            // console.log(triviaColumn);
+            // console.log(triviaColumn[x]);
+            // console.log(triviaRow[y]);
+            if (values && values.includes(triviaRow[y]) && values.includes(triviaColumn[x])) {
+                boardCopy[i] = xIsNext ? 'X' : 'O';
+                setBoard(boardCopy);
+                setXisNext(!xIsNext);
+                setUserInput("");
+            } else {
+                console.log("hi");
+                setUserInput("");
+                return;
+            }
         }
-        boardCopy[i] = xIsNext ? 'X' : 'O';
-        setBoard(boardCopy);
-        setXisNext(!xIsNext);
+        //  boardCopy[i] = xIsNext ? 'X' : 'O';
+        //         setBoard(boardCopy);
+        //         setXisNext(!xIsNext);
 
+    };
+
+
+    const handleClick = i => {
+        showModal(i);
+        // checkPlayer(i);
+        setUserInput("");
     };
 
     const startGame = () => {
@@ -72,27 +101,31 @@ function NormalGame() {
     const length = teams.length;
 
     const fillTrivia = () => {
-        var usedRow = [];
-        var usedCol = [];
-        var usedIndexes = [];
-        while (usedIndexes.length < 6) {
-            var index = Math.floor(Math.random() * length);
-            if (usedIndexes.indexOf(index) === -1) {
-                usedIndexes.push(index)
-                if (usedIndexes.length < 4) {
-                    usedRow.push(teams[index])
-                } else {
-                    usedCol.push(teams[index])
-                }
-            }  
-        };
-        setTriviaRow(usedRow);
-        setTriviaColumn(usedCol);
+        setTriviaRow(["Bills", "Bills", "Bills"]);
+        setTriviaColumn(["Giants", "Giants", "Giants"]);
+        // var usedRow = [];
+        // var usedCol = [];
+        // var usedIndexes = [];
+        // while (usedIndexes.length < 6) {
+        //     var index = Math.floor(Math.random() * length);
+        //     if (usedIndexes.indexOf(index) === -1) {
+        //         usedIndexes.push(index)
+        //         if (usedIndexes.length < 4) {
+        //             usedRow.push(teams[index])
+        //         } else {
+        //             usedCol.push(teams[index])
+        //         }
+        //     }  
+        // };
+        // setTriviaRow(usedRow);
+        // setTriviaColumn(usedCol);
     };
 
     return (
         <div className='board'>
             <Container>
+                {modalData && (<PlayerSearch show={modalData} userInput={userInput} onClose={hideModal} handleSearch={handleSearch} search = {checkPlayer} data = {modalData} />)}
+                {/* <input type="text" name="player" placeholder="Enter Player Name" value={userInput} onChange={(event) => setUserInput(event.target.value)} /> */}
                 <Row>
                     <Col>
                         Football Tic Tac Toe
