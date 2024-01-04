@@ -1,11 +1,8 @@
 import requests
-import csv
 import pandas as pd
 from bs4 import BeautifulSoup, Comment
 import time
-import re
 import json
-import pymysql
 from sqlalchemy import create_engine, Integer, String, ForeignKey, Column, UniqueConstraint, Table
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 import os
@@ -53,7 +50,7 @@ team_names = {
     "htx": "Houston Texans"
 }
 
-names = {"nyg": "New York Giants", "buf": "Buffalo Bills"}
+test_names = {"nyg": "New York Giants", "buf": "Buffalo Bills"}
 
 positions = {"QB": "QB", "RB": "RB", "FB": "FB", "WR": "WR", "TE": "TE", "WR/QB": "QB", "DT/FB": "FB",
              "LT": "OL", "T": "OL", "LG": "OL", "G": "OL", "C": "OL", "RG": "OL", "RT": "OL", "LG/LT": "OL", "RG/RT": "OL", "LT/RT": "OL", "LG/RG": "OL", "RT/LT": "OL", "RG/LG": "OL", "OL": "OL", "OG": "OL", "OT": "OL", "G/C": "OL", "T/G": "OL", "C/RG": "OL", "LT/LG": "OL", "T/TE": "OL", "LG/C": "OL", "RG/C": "OL", "RT/RG": "OL", "RT/LG": "OL", "G/T": "OL", "C/LG": "OL", "LG/RT": "OL",
@@ -63,127 +60,47 @@ positions = {"QB": "QB", "RB": "RB", "FB": "FB", "WR": "WR", "TE": "TE", "WR/QB"
              "LCB": "DB", "CB": "DB", "RCB": "DB", "DB": "DB", "S": "DB", "SS": "DB", "FS": "S", "SS/FS": "DB", "FS/SS": "DB", "LCB/RCB": "DB", "RCB/LCB": "DB", "RCB/FS": "DB", "LCB/FS": "DB", "SS/RLB": "DB", "SS/LCB": "DB", "FS/RCB": "DB", "CB/SS": "DB", "RCB/DB": "DB", "DB/FS": "DB", "RCB/SS": "DB",
              "K": "K", "P": "P", "LS": "LS"} #dictionary to standardize the positions across years
 
+nfl_teams = [
+    "Arizona Cardinals",
+    "Atlanta Falcons",
+    "Baltimore Ravens",
+    "Buffalo Bills",
+    "Carolina Panthers",
+    "Chicago Bears",
+    "Cincinnati Bengals",
+    "Cleveland Browns",
+    "Dallas Cowboys",
+    "Denver Broncos",
+    "Detroit Lions",
+    "Green Bay Packers",
+    "Houston Texans",
+    "Indianapolis Colts",
+    "Jacksonville Jaguars",
+    "Kansas City Chiefs",
+    "Las Vegas Raiders",
+    "Los Angeles Chargers",
+    "Los Angeles Rams",
+    "Miami Dolphins",
+    "Minnesota Vikings",
+    "New England Patriots",
+    "New Orleans Saints",
+    "New York Giants",
+    "New York Jets",
+    "Philadelphia Eagles",
+    "Pittsburgh Steelers",
+    "San Francisco 49ers",
+    "Seattle Seahawks",
+    "Tampa Bay Buccaneers",
+    "Tennessee Titans",
+    "Washington Commanders"
+]
 
-def roster_scrape():
-    playerDict = []
-    for abbrev, team in team_names.items():
-        for year in range(2013, 2023):
-            url = 'https://www.pro-football-reference.com/teams/{team}/{year}_roster.htm'
-            req = requests.get(url.format(team = abbrev, year = year))
-            soup = BeautifulSoup(req.content, 'html.parser')
-            comments = soup.find_all(string=lambda text: isinstance(text, Comment)) #since it dynamically loads, need to iterate comments
-            # print(comments)
-            for each in comments:
-                if 'table' in each: #find the comment that contains table tag
-                    if 'id="roster"' in each: #find the table that has the id of roster
-                        try:
-                            df = pd.read_html(StringIO(each))[0]
-                            df["Team"] = team
-                            df = df.drop(df[df["Player"] == "Team Total"].index) #remove the "Team Total" row
-                            df["Edited-Pos"] = df["Pos"].map(MyDict(positions)) #edit the positions to be consistent across different years
-                            df["Player-pos"] = df["Player"].astype(str) + " (" + df["Edited-Pos"] + ")" #create the player-pos column to differentiate between players with the same name
-                            result = df[["Player-pos", "Team"]] #subset for just the player-pos and team
-                            result = result.dropna() #remove any NA columns
-                            playerDict.append(result) #add this team, year to the final output
-                        except:
-                            continue
-            time.sleep(8) #prevent the website from blocking us due to too many requests at once
-    finalDf = pd.concat(playerDict) #convert the final output to a df
-    finalDf = finalDf.drop_duplicates() #remove any duplicates we have from players between the years
-    # for i in finalDf['Player-pos']:
-    #     pos = ''.join(re.findall('\(([^)]+)', i)) 
-    #     if pos in positions:
-    #         newKey = ''.join(re.findall("(.*?)\s*\(", i)) + " (" + positions[pos] + ")"
-    #         finalDf['Player-pos'].replace(([i], newKey))
-    finalDf = finalDf.groupby('Player-pos')['Team'].apply(list).to_dict() #convert the df to a dictionary for quick O(1) searching
-    # print(finalDf)
-    with open('roster.json', 'w') as f:
-        json.dump(finalDf, f)
-    # output = json.dumps(finalDf, sort_keys=True, separators=(' ', ':'))
-    # print(output)
-# roster_scrape()
-
-
-# DB connection
-db_username = os.getenv("MYSQL_USER")
-db_password = os.getenv("MYSQL_PASSWORD")
-db_host = os.getenv("MYSQL_HOST")
-db_port = os.getenv("MYSQL_PORT")
-db_name = os.getenv("MYSQL_DB")
-db_string = f"mysql+pymysql://{db_username}:{db_password}@{db_host}:{db_port}/{db_name}"
-                    
-# connection = pymysql.connect(
-#     host = db_host,
-#     user = db_username,
-#     password = db_password,
-#     db = db_name
-# )
-
-
-# def createTeamsTable():
-#     # cursor.execute("CREATE TABLE IF NOT EXISTS teams (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(25))")
-#     nfl_teams = [
-#         "Arizona Cardinals",
-#         "Atlanta Falcons",
-#         "Baltimore Ravens",
-#         "Buffalo Bills",
-#         "Carolina Panthers",
-#         "Chicago Bears",
-#         "Cincinnati Bengals",
-#         "Cleveland Browns",
-#         "Dallas Cowboys",
-#         "Denver Broncos",
-#         "Detroit Lions",
-#         "Green Bay Packers",
-#         "Houston Texans",
-#         "Indianapolis Colts",
-#         "Jacksonville Jaguars",
-#         "Kansas City Chiefs",
-#         "Las Vegas Raiders",
-#         "Los Angeles Chargers",
-#         "Los Angeles Rams",
-#         "Miami Dolphins",
-#         "Minnesota Vikings",
-#         "New England Patriots",
-#         "New Orleans Saints",
-#         "New York Giants",
-#         "New York Jets",
-#         "Philadelphia Eagles",
-#         "Pittsburgh Steelers",
-#         "San Francisco 49ers",
-#         "Seattle Seahawks",
-#         "Tampa Bay Buccaneers",
-#         "Tennessee Titans",
-#         "Washington Commanders"
-#     ]
-
-#     # Creating a DataFrame with NFL team names
-#     df_nfl_teams = pd.DataFrame(nfl_teams, columns=["name"])
-
-#     engine = create_engine(db_string)
-#     Base = declarative_base()
-#     class NFLTeams(Base):
-#         __tablename__ = 'teams'
-
-#         id = Column(Integer, primary_key=True, autoincrement=True)
-#         name = Column(String(50), nullable=False)
-
-#     # Create the table in the database if it doesn't exist
-#     Base.metadata.create_all(engine)
-
-#     # Use 'if_exists' parameter as 'replace' to create or replace table, or 'append' to insert into existing table
-#     df_nfl_teams.to_sql('teams', con=engine, if_exists='append', index=False)
-
-#     # Close the database connection
-#     engine.dispose()
-
-# def playersScrape():
+# def roster_scrape():
 #     playerDict = []
-#     for abbrev, team in names.items():
-#         for year in range(2021, 2023):
+#     for abbrev, team in team_names.items():
+#         for year in range(2013, 2023):
 #             url = 'https://www.pro-football-reference.com/teams/{team}/{year}_roster.htm'
 #             req = requests.get(url.format(team = abbrev, year = year))
-#             # req = requests.get(url)
 #             soup = BeautifulSoup(req.content, 'html.parser')
 #             comments = soup.find_all(string=lambda text: isinstance(text, Comment)) #since it dynamically loads, need to iterate comments
 #             # print(comments)
@@ -195,50 +112,37 @@ db_string = f"mysql+pymysql://{db_username}:{db_password}@{db_host}:{db_port}/{d
 #                             df["Team"] = team
 #                             df = df.drop(df[df["Player"] == "Team Total"].index) #remove the "Team Total" row
 #                             df["Edited-Pos"] = df["Pos"].map(MyDict(positions)) #edit the positions to be consistent across different years
-#                             # df["Player-pos"] = df["Player"].astype(str) + " (" + df["Edited-Pos"] + ")" #create the player-pos column to differentiate between players with the same name
-#                             # result = df[["Player-pos", "Team"]] #subset for just the player-pos and team
-#                             result = df[["Player", "Edited-Pos", "Team"]]
+#                             df["Player-pos"] = df["Player"].astype(str) + " (" + df["Edited-Pos"] + ")" #create the player-pos column to differentiate between players with the same name
+#                             result = df[["Player-pos", "Team"]] #subset for just the player-pos and team
 #                             result = result.dropna() #remove any NA columns
 #                             playerDict.append(result) #add this team, year to the final output
-#                         except Exception as e:
-#                             print(f"Error processing table: {e}")
+#                         except:
 #                             continue
 #             time.sleep(8) #prevent the website from blocking us due to too many requests at once
-#     # print(playerDict)
 #     finalDf = pd.concat(playerDict) #convert the final output to a df
 #     finalDf = finalDf.drop_duplicates() #remove any duplicates we have from players between the years
-#     print(finalDf)
-# # def passing_scrape():
-    
-# def playersTable():
-#     engine = create_engine(f'mysql+pymysql://{db_username}:{db_password}@{db_host}:{db_port}/{db_name}')
-#     Session = sessionmaker(bind=engine)
-#     session = Session()
-#     Base = declarative_base()
-
-#     class Player(Base):
-#         __tablename__ = 'players'
-#         id = Column(Integer, primary_key=True, autoincrement=True)
-#         name = Column(String(40))
-#         position = Column(String(10))
-#         team_id = Column(Integer, ForeignKey('teams.id'))
-
-#     # Create tables in the database
-#     Base.metadata.create_all(engine)
-#     # Mapping team names to their respective IDs in 'teams' table
-#     team_name_to_id = {name: id for id, name in session.query(Team.id, Team.name)}
-
-#     # Inserting data into Player table
-#     for index, row in finalDf.iterrows():
-#         # Assuming 'MyDict' function maps position abbreviations to full names
-#         # and 'positions' dictionary is defined somewhere in your code
-#         team_id = team_name_to_id.get(row['Team'])
-#         new_player = Player(name=row['Player'], position=row['Edited-Pos'], team_id=team_id)
-#         session.add(new_player)
-
-#     session.commit()
+#     # for i in finalDf['Player-pos']:
+#     #     pos = ''.join(re.findall('\(([^)]+)', i)) 
+#     #     if pos in positions:
+#     #         newKey = ''.join(re.findall("(.*?)\s*\(", i)) + " (" + positions[pos] + ")"
+#     #         finalDf['Player-pos'].replace(([i], newKey))
+#     finalDf = finalDf.groupby('Player-pos')['Team'].apply(list).to_dict() #convert the df to a dictionary for quick O(1) searching
+#     # print(finalDf)
+#     with open('roster.json', 'w') as f:
+#         json.dump(finalDf, f)
+#     # output = json.dumps(finalDf, sort_keys=True, separators=(' ', ':'))
+#     # print(output)
+# # roster_scrape()
 
 
+# DB connection
+db_username = os.getenv("MYSQL_USER")
+db_password = os.getenv("MYSQL_PASSWORD")
+db_host = os.getenv("MYSQL_HOST")
+db_port = os.getenv("MYSQL_PORT")
+db_name = os.getenv("MYSQL_DB")
+db_string = f"mysql+pymysql://{db_username}:{db_password}@{db_host}:{db_port}/{db_name}"
+                    
 # SQLAlchemy setup
 engine = create_engine(db_string)
 Session = sessionmaker(bind=engine)
@@ -284,7 +188,7 @@ def scrape_players(team_abbreviations, positions_mapping):
     """
     player_dict = []
     for abbrev, team in team_abbreviations.items():
-        for year in range(2021, 2023):
+        for year in range(2013, 2023):
             url = f'https://www.pro-football-reference.com/teams/{abbrev}/{year}_roster.htm'
             req = requests.get(url)
             soup = BeautifulSoup(req.content, 'html.parser')
@@ -326,46 +230,7 @@ def populate_players_table(player_df):
                 player.teams.append(team)
 
         session.commit()
-# if __name__ == "__main__":
-#     playersScrape()
-nfl_teams = [
-    "Arizona Cardinals",
-    "Atlanta Falcons",
-    "Baltimore Ravens",
-    "Buffalo Bills",
-    "Carolina Panthers",
-    "Chicago Bears",
-    "Cincinnati Bengals",
-    "Cleveland Browns",
-    "Dallas Cowboys",
-    "Denver Broncos",
-    "Detroit Lions",
-    "Green Bay Packers",
-    "Houston Texans",
-    "Indianapolis Colts",
-    "Jacksonville Jaguars",
-    "Kansas City Chiefs",
-    "Las Vegas Raiders",
-    "Los Angeles Chargers",
-    "Los Angeles Rams",
-    "Miami Dolphins",
-    "Minnesota Vikings",
-    "New England Patriots",
-    "New Orleans Saints",
-    "New York Giants",
-    "New York Jets",
-    "Philadelphia Eagles",
-    "Pittsburgh Steelers",
-    "San Francisco 49ers",
-    "Seattle Seahawks",
-    "Tampa Bay Buccaneers",
-    "Tennessee Titans",
-    "Washington Commanders"
-]
+
 create_teams_table(nfl_teams)
 players_df = scrape_players(team_names, positions)
 populate_players_table(players_df)
-
-# def defense_scrape():
-
-# def scrimmage_scrape():
