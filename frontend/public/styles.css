@@ -221,3 +221,25 @@ body {
 /* .App input {
     height: 20px;
 } */
+
+/* Add this in your CSS file */
+.suggestion-item {
+    padding: 10px;
+    margin: 5px 0px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    /* subtle border for each suggestion */
+    border-radius: 5px;
+    /* rounded corners */
+    background-color: #f9f9f9;
+    color: black;
+    /* light grey background */
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.suggestion-item:hover {
+    background-color: #f0f0f0;
+    /* slightly darker grey on hover */
+    border-color: #ccc;
+    /* darker border on hover */
+}

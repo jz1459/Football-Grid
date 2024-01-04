@@ -47,15 +47,19 @@ function NormalGame() {
         setSuggestions([]);
     };
 
-    // Use your imagination to render suggestions.
-    const renderSuggestion = suggestion => (
-        <div>
-            {suggestion.name} ({suggestion.position})
-        </div>
-    );
+    // // Use your imagination to render suggestions.
+    // const renderSuggestion = suggestion => (
+    //     <div>
+    //         {suggestion.name} ({suggestion.position})
+    //     </div>
+    // );
 
     const onChange = (event, { newValue }) => {
         setValue(newValue);
+    };
+
+    const handleSearchChange = (event, { newValue }) => {
+        setUserInput(newValue);
     };
 
     // Autosuggest component's props
@@ -94,10 +98,15 @@ function NormalGame() {
 
         if (userInput.length !== 0) {
             try {
-                console.log(userInput);
-                const response = await axios.post('http://localhost:5000/get_player', { playerName: userInput });
+                // Extract the player's name from userInput before sending it to the endpoint
+                // Assuming the format is "PlayerName (Position)"
+                const playerName = userInput.split(' (')[0]; // This will get just the name part
+
+                console.log(playerName); // Log the extracted player name
+
+                const response = await axios.post('http://localhost:5000/get_player', { playerName: playerName });
                 const values = response.data;
-                console.log(values.includes(triviaRow[y]));
+
                 if (values && values.includes(triviaRow[y]) && values.includes(triviaColumn[x])) {
                     boardCopy[i] = xIsNext ? 'X' : 'O';
                     setBoard(boardCopy);
@@ -222,7 +231,20 @@ function NormalGame() {
             <div>
                 <Container>
                     <div className='proj-modal'>
-                        {show && (<PlayerSearch show={show} userInput={userInput} onClose={hideModal} handleSearch={handleSearch} checkPlayer={checkPlayer} modalData={modalData} />)}
+                        {/* {show && (<PlayerSearch show={show} userInput={userInput} onClose={hideModal} handleSearch={handleSearch} checkPlayer={checkPlayer} modalData={modalData} />)} */}
+                        {show && <PlayerSearch
+                    show={show}
+                    onClose={() => setShow(false)}
+                    handleSearch={handleSearchChange}
+                    userInput={userInput}
+                    setUserInput= {setUserInput}        
+                    checkPlayer={checkPlayer}
+                    modalData={modalData}
+                    suggestions={suggestions}
+                    onSuggestionsFetchRequested={onSuggestionsFetchRequested}
+                    onSuggestionsClearRequested={onSuggestionsClearRequested}
+                    getSuggestionValue={getSuggestionValue}
+                />}
                     </div>
                     <Row>
                         <div className='title'>
@@ -244,15 +266,15 @@ function NormalGame() {
                             </div>
                         </Col>
                     </Row>
-                    <Autosuggest
+                    {/* <Autosuggest
                         suggestions={suggestions}
                         onSuggestionsFetchRequested={onSuggestionsFetchRequested}
                         onSuggestionsClearRequested={onSuggestionsClearRequested}
                         getSuggestionValue={getSuggestionValue}
                         renderSuggestion={renderSuggestion}
                         inputProps={inputProps}
-                    />
-                </Container>
+                        /> */}
+                </Container> 
             </div>
         </section>
     );
