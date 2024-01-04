@@ -2,12 +2,13 @@ import requests
 import pandas as pd
 from bs4 import BeautifulSoup, Comment
 import time
-import json
-from sqlalchemy import create_engine, Integer, String, ForeignKey, Column, UniqueConstraint, Table
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from models import Player, Team, db
 import os
 from dotenv import load_dotenv
 from io import StringIO
+from app import app
 load_dotenv()
 
 
@@ -95,6 +96,93 @@ nfl_teams = [
     "Washington Commanders"
 ]
 
+# DB connection
+db_string = f"mysql+pymysql://{os.getenv('MYSQL_USER')}:{os.getenv('MYSQL_PASSWORD')}@{os.getenv('MYSQL_HOST')}:{os.getenv('MYSQL_PORT')}/{os.getenv('MYSQL_DB')}"
+engine = create_engine(db_string)
+
+# Bind the engine to the db's metadata
+db.metadata.bind = engine
+
+# Create sessionmaker bound to this engine
+Session = sessionmaker(bind=engine)
+session = Session()
+
+def create_teams_table(nfl_teams):
+    """
+    Create and populate the teams table with NFL team names.
+    """
+    for team_name in nfl_teams:
+        # Check if the team already exists in the database to avoid duplicates
+        existing_team = session.query(Team).filter_by(name=team_name).first()
+        if not existing_team:
+            new_team = Team(name=team_name)
+            db.session.add(new_team)
+    
+    db.session.commit()
+
+
+def scrape_players(team_abbreviations, positions_mapping):
+    """
+    Scrape player data from the specified website and return a DataFrame.
+    """
+    player_dict = []
+    for abbrev, team in team_abbreviations.items():
+        for year in range(2013, 2023):
+            url = f'https://www.pro-football-reference.com/teams/{abbrev}/{year}_roster.htm'
+            req = requests.get(url)
+            soup = BeautifulSoup(req.content, 'html.parser')
+            comments = soup.find_all(string=lambda text: isinstance(text, Comment))
+            for each in comments:
+                if 'table' in each and 'id="roster"' in each:
+                    try:
+                        df = pd.read_html(StringIO(each))[0]
+                        df["Team"] = team
+                        df = df.drop(df[df["Player"] == "Team Total"].index)
+                        df["Edited-Pos"] = df["Pos"].map(positions_mapping)
+                        result = df[["Player", "Edited-Pos", "Team"]]
+                        result = result.dropna()
+                        player_dict.append(result)
+                    except Exception as e:
+                        print(f"Error processing table: {e}")
+                        continue
+            time.sleep(8)
+    return pd.concat(player_dict).drop_duplicates()
+
+
+def populate_players_table(player_df):
+    """
+    Populate the players table with player data from the DataFrame.
+    """
+    for index, row in player_df.iterrows():
+        # Find or create the team
+        team = Team.query.filter_by(name=row['Team']).first()
+
+        # Find or create the player, considering both name and position
+        player = Player.query.filter_by(name=row['Player'], position=row['Edited-Pos']).first()
+        if not player:
+            player = Player(name=row['Player'], position=row['Edited-Pos'])
+            db.session.add(player)
+            db.session.commit()  # Commit to get the ID for the new player
+
+        # Create association between player and team if not already exists
+        if team and (team not in player.teams):
+            player.teams.append(team)
+
+    db.session.commit()
+
+
+if __name__ == "__main__":
+    # DB connection string setup and Session creation remains the same
+    
+    with app.app_context():  # Wrap all operations with the app context
+        db.create_all()  # This will now be aware of your Flask app configuration
+        
+        create_teams_table(nfl_teams)
+        players_df = scrape_players(team_names, positions)
+        populate_players_table(players_df)
+
+
+
 # def roster_scrape():
 #     playerDict = []
 #     for abbrev, team in team_names.items():
@@ -133,104 +221,3 @@ nfl_teams = [
 #     # output = json.dumps(finalDf, sort_keys=True, separators=(' ', ':'))
 #     # print(output)
 # # roster_scrape()
-
-
-# DB connection
-db_username = os.getenv("MYSQL_USER")
-db_password = os.getenv("MYSQL_PASSWORD")
-db_host = os.getenv("MYSQL_HOST")
-db_port = os.getenv("MYSQL_PORT")
-db_name = os.getenv("MYSQL_DB")
-db_string = f"mysql+pymysql://{db_username}:{db_password}@{db_host}:{db_port}/{db_name}"
-                    
-# SQLAlchemy setup
-engine = create_engine(db_string)
-Session = sessionmaker(bind=engine)
-session = Session()
-Base = declarative_base()
-
-# Association table for players and teams
-player_team_association = Table('player_team_association', Base.metadata,
-                                Column('player_id', Integer, ForeignKey('players.id')),
-                                Column('team_id', Integer, ForeignKey('teams.id')))
-
-# Define ORM classes
-class Team(Base):
-    __tablename__ = 'teams'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(25), nullable=False)
-    players = relationship("Player", secondary=player_team_association, back_populates="teams")
-
-class Player(Base):
-    __tablename__ = 'players'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(40))
-    position = Column(String(10))
-    teams = relationship("Team", secondary=player_team_association, back_populates="players")
-    UniqueConstraint(name, position, name="uix_1")  # Unique constraint for name and position
-
-def create_teams_table(nfl_teams):
-    """
-    Create and populate the teams table with NFL team names.
-    """
-    # Create the table in the database if it doesn't exist
-    Base.metadata.create_all(engine)
-
-    # Insert NFL team names into the 'teams' table
-    with Session() as session:
-        for team_name in nfl_teams:
-            session.add(Team(name=team_name))
-        session.commit()
-
-def scrape_players(team_abbreviations, positions_mapping):
-    """
-    Scrape player data from the specified website and return a DataFrame.
-    """
-    player_dict = []
-    for abbrev, team in team_abbreviations.items():
-        for year in range(2013, 2023):
-            url = f'https://www.pro-football-reference.com/teams/{abbrev}/{year}_roster.htm'
-            req = requests.get(url)
-            soup = BeautifulSoup(req.content, 'html.parser')
-            comments = soup.find_all(string=lambda text: isinstance(text, Comment))
-            for each in comments:
-                if 'table' in each and 'id="roster"' in each:
-                    try:
-                        df = pd.read_html(StringIO(each))[0]
-                        df["Team"] = team
-                        df = df.drop(df[df["Player"] == "Team Total"].index)
-                        df["Edited-Pos"] = df["Pos"].map(positions_mapping)
-                        result = df[["Player", "Edited-Pos", "Team"]]
-                        result = result.dropna()
-                        player_dict.append(result)
-                    except Exception as e:
-                        print(f"Error processing table: {e}")
-                        continue
-            time.sleep(8)
-    return pd.concat(player_dict).drop_duplicates()
-
-def populate_players_table(player_df):
-    with Session() as session:
-        # Create a dictionary mapping team names to their IDs
-        team_name_to_id = {name: id for id, name in session.query(Team.id, Team.name)}
-
-        for index, row in player_df.iterrows():
-            # Find or create the player based on name and position
-            player = session.query(Player).filter_by(name=row['Player'], position=row['Edited-Pos']).first()
-            if not player:
-                player = Player(name=row['Player'], position=row['Edited-Pos'])
-                session.add(player)
-                session.commit()  # Commit to get the ID for the new player
-
-            team_id = team_name_to_id.get(row['Team'])
-            team = session.query(Team).filter_by(id=team_id).first()
-
-            # Add the player-team association if it doesn't exist already
-            if team not in player.teams:
-                player.teams.append(team)
-
-        session.commit()
-
-create_teams_table(nfl_teams)
-players_df = scrape_players(team_names, positions)
-populate_players_table(players_df)
