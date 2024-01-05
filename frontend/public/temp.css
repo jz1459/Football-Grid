@@ -1,0 +1,123 @@
+/* End of Default CSS */
+
+/* Game CSS */
+/* .game {
+    position: relative;
+    padding-top: 5vh;
+    background-position: top center;
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+
+.game .container {
+    text-align: center;
+    height: 77vh;
+    width: 100%;
+    padding-left: 20vw;
+}
+
+.game h1 {
+    margin-left: 24vw;
+    font-size: 35px;
+    font-weight: 700;
+}
+.message p{
+    font-size: 30px;
+    font-weight: 700;
+    color: aqua;
+    margin-left: 4vw;
+}
+
+.message .start-game {
+    font-weight: 700;
+    color: #fff;
+    border: 1px solid #fff;
+    padding: 18px 34px;
+    font-size: 30px;
+    position: relative;
+    background-color: transparent;
+    transition: 0.3s ease-in-out;
+    text-decoration: none;
+    margin-left: 4vw;
+}
+
+.message .start-game::before {
+    content: "";
+    width: 0%;
+    height: 100%;
+    position: absolute;
+    background-color: #fff;
+    left: 0;
+    top: 0;
+    z-index: -1;
+    transition: 0.3s ease-in-out;
+}
+
+.message .start-game:hover {
+    color: #121212;
+    text-shadow: none;
+}
+
+.message .start-game:hover::before {
+    content: "";
+    width: 100%;
+    height: 100%;
+    position: absolute;
+}
+
+.title {
+    font-size: 30px;
+    font-weight: 700;
+}
+
+/* End of Game CSS */
+
+/* Trivia CSS */
+
+
+
+/* .trivia-col {
+    display: block;
+    font-size: 25px;
+    margin-left: 9vw;
+}
+
+
+.trivia-row .board {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #fff;
+    font-size: 25px;
+    margin-left: 18.75vw;
+}
+
+.trivia {
+    border: 4px solid black;
+    border-radius: 10px;
+    width: 200px;
+    height: 200px;
+    margin: 0 auto;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+} */
+
+/* @media (min-width: 300px) and (max-width: 768px) {
+    .section-header h1 {
+        font-size: 35px;
+    }
+} */
+
+/* @media (min-width: 769px) and (max-width: 1200px) {
+    .section-header h1 {
+        font-size: 45px;
+    }
+} */
+
+/* @media (min-width: 1201px) and (max-width: ) */
+/* End of Trivia CSS */
+
+/* Popup Search CSS */

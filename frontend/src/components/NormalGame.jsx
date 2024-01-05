@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import NormalBoard from './NormalBoard';
 import { calculateWinner } from '../NormalWinner';
-import Roster from '../data/roster.json';
 import { Container, Row, Col} from "react-bootstrap";
 import TriviaCategories from './TriviaCategories';
 import PlayerSearch from './PlayerSearch';
 import axios from 'axios';
-import Autosuggest from 'react-autosuggest';
 
 function NormalGame() {
     const [board, setBoard] = useState(Array(9).fill(null));
@@ -37,7 +35,7 @@ function NormalGame() {
         }
     };
 
-     // Autosuggest will call this function every time you need to update suggestions.
+    // Autosuggest will call this function every time you need to update suggestions.
     const onSuggestionsFetchRequested = async ({ value }) => {
         setSuggestions(await getSuggestions(value));
     };
@@ -46,13 +44,6 @@ function NormalGame() {
     const onSuggestionsClearRequested = () => {
         setSuggestions([]);
     };
-
-    // // Use your imagination to render suggestions.
-    // const renderSuggestion = suggestion => (
-    //     <div>
-    //         {suggestion.name} ({suggestion.position})
-    //     </div>
-    // );
 
     const onChange = (event, { newValue }) => {
         setValue(newValue);
@@ -79,14 +70,6 @@ function NormalGame() {
             setModalData(i);
             setShow(true);
         }
-    };
-
-    const hideModal = () => {
-        setModalData(null);
-        setShow(false);
-    }
-    const handleSearch = (event) => {
-        setUserInput(event.target.value);
     };
 
     const checkPlayer = async (i) => {
@@ -123,32 +106,6 @@ function NormalGame() {
             }
         }
     };
-    // const checkPlayer = (i) => {
-    //     const boardCopy = [...board];
-    //     // if sqaure is occupied or game is over, return
-    //     if (winner || boardCopy[i]) return;
-
-    //     // Grab the trivia parameter indexes
-    //     const x = Math.floor(i / 3);
-    //     const y = i - (3 * x);
-
-    //     // Fill the square if the value is right
-    //     if (userInput.length !== 0) {
-    //         console.log(userInput.length);
-    //         const values = Roster[userInput];
-    //         if (values && values.includes(triviaRow[y]) && values.includes(triviaColumn[x])) {
-    //             boardCopy[i] = xIsNext ? 'X' : 'O';
-    //             setBoard(boardCopy);
-    //             setXisNext(!xIsNext);
-    //             setUserInput("");
-    //         } else {
-    //             alert("Incorrect Answer!");
-    //             setUserInput("");
-    //             return;
-    //         }
-    //     }
-    // };
-
 
     const startGame = () => {
         setBoard(Array(9).fill(null));
@@ -165,9 +122,6 @@ function NormalGame() {
 
     const [triviaRow, setTriviaRow] = useState((Array(3).fill(null)));
     const [triviaColumn, setTriviaColumn] = useState((Array(3).fill(null)));
-    // const teams = ["Bills", "Dolphins", "Patriots", "Jets", "Bengals", "Ravens", "Steelers", "Browns", "Eagles", "Cowboys", "Giants", "Commanders",
-    //     "Vikings", "Lions", "Packers", "Bears", "49ers", "Seahawks", "Rams", "Cardinals", "Buccaneers", "Panthers", "Saints", "Falcons",
-    //     "Chiefs", "Chargers", "Raiders", "Broncos", "Jaguars", "Titans", "Colts", "Texans"];
     const teams = [
         "Arizona Cardinals",
         "Atlanta Falcons",
@@ -206,8 +160,6 @@ function NormalGame() {
     const length = teams.length;
 
     const fillTrivia = () => {
-        // setTriviaRow(["Bills", "Bills", "Bills"]);
-        // setTriviaColumn(["Giants", "Giants", "Giants"]);
         var usedRow = [];
         var usedCol = [];
         var usedIndexes = [];
@@ -227,17 +179,51 @@ function NormalGame() {
     };
 
     return (
+        // 
         <section className='game' id='game'>
-            <div>
-                <Container>
-                    <div className='proj-modal'>
-                        {/* {show && (<PlayerSearch show={show} userInput={userInput} onClose={hideModal} handleSearch={handleSearch} checkPlayer={checkPlayer} modalData={modalData} />)} */}
-                        {show && <PlayerSearch
+            <Container>
+                {/* Title */}
+                <Row>
+                    <div className='title'>
+                        <h1>Football Tic Tac Toe</h1>
+                    </div>
+                </Row>
+
+                {/* Trivia categories and board */}
+                <Row className='game-content'>
+                    <Col className='trivia-col-container'>
+                        {/* Render the left trivia categories */}
+                        <TriviaCategories arr={triviaColumn} direction="col" />
+                    </Col>
+                    <Col>
+                        <Row className='trivia-row-container'>
+                            {/* Render the top trivia categories */}
+                            <TriviaCategories arr={triviaRow} direction="row" />
+                        </Row>
+                        <Row>
+                            <div className='board'>
+                                {/* Render the tic-tac-toe board */}
+                                <NormalBoard squares={board} onClick={(i) => showModal(i)} />
+                            </div>
+                        </Row>
+                    </Col>
+                </Row>
+
+                {/* Message and buttons */}
+                <Row>
+                    <div className='message'>
+                        <p>{winner ? 'Winner: ' + winner : 'Next Player: ' + (xIsNext ? 'X' : 'O')}</p>
+                        {renderMoves()}
+                    </div>
+                </Row>
+
+                {/* Modal for player search */}
+                {show && <PlayerSearch
                     show={show}
                     onClose={() => setShow(false)}
                     handleSearch={handleSearchChange}
                     userInput={userInput}
-                    setUserInput= {setUserInput}        
+                    setUserInput={setUserInput}
                     checkPlayer={checkPlayer}
                     modalData={modalData}
                     suggestions={suggestions}
@@ -245,37 +231,7 @@ function NormalGame() {
                     onSuggestionsClearRequested={onSuggestionsClearRequested}
                     getSuggestionValue={getSuggestionValue}
                 />}
-                    </div>
-                    <Row>
-                        <div className='title'>
-                            <h1>Football Tic Tac Toe</h1>
-                        </div>
-                    </Row>
-                    <Row>
-                        <div className='trivia-row'><TriviaCategories arr={triviaRow} /></div>
-                    </Row>
-                    <Row>
-                        <Col xl={5}>
-                            <div className='trivia-col'><TriviaCategories arr={triviaColumn} /></div>
-                        </Col>
-                        <Col xl={7}>
-                            <NormalBoard squares={board} onClick={(i) => {showModal(i)}} />
-                            <div className='message'>
-                                <p>{winner ? 'Winner: ' + winner : 'Next Player: ' + (xIsNext ? 'X' : 'O')}</p>
-                                {renderMoves()}
-                            </div>
-                        </Col>
-                    </Row>
-                    {/* <Autosuggest
-                        suggestions={suggestions}
-                        onSuggestionsFetchRequested={onSuggestionsFetchRequested}
-                        onSuggestionsClearRequested={onSuggestionsClearRequested}
-                        getSuggestionValue={getSuggestionValue}
-                        renderSuggestion={renderSuggestion}
-                        inputProps={inputProps}
-                        /> */}
-                </Container> 
-            </div>
+            </Container>
         </section>
     );
 };

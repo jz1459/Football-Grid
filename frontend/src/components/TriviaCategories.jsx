@@ -1,15 +1,17 @@
 import React from "react";
 
-function TriviaCategories({ arr }) {
+function TriviaCategories({ arr, direction }) {
+    const className = `trivia-${direction}`;
     return (
-        <div className="trivia-arr">
+        <div className={className}>
             {arr.map((team, i) => (
-                <li key={i} className="trivia">
+                <div key={i} className="trivia">
                     <p>{team}</p>
-                </li>
+                </div>
             ))}
         </div>
     );
 };
+
 
 export default TriviaCategories;

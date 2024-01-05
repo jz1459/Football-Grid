@@ -1,7 +1,7 @@
 // PlayerSearch.jsx
 
 import React from "react";
-import { Modal } from "react-bootstrap";
+import { Modal, Row, Container } from "react-bootstrap";
 import Autosuggest from 'react-autosuggest';
 
 function PlayerSearch({ 
@@ -16,7 +16,8 @@ function PlayerSearch({
     onSuggestionsFetchRequested,
     onSuggestionsClearRequested,
     getSuggestionValue
-}) {
+})
+{
     const handleCLick = () => {
         checkPlayer(modalData);
         onClose();
@@ -45,28 +46,36 @@ function PlayerSearch({
             centered
         >
             <Modal.Header closeButton>
-                <Modal.Title>Search Player</Modal.Title>
+                <Modal.Title className="search-title">
+                    <Container>
+                    <Row>
+                    <h1>Search Player</h1> </Row>
+                        <Row><h2>*Note only players from 2013-2022 are elgible</h2> </Row>
+                        </Container>
+                </Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <div className="search-bar">
-                    <Autosuggest
-                        suggestions={suggestions}
-                        onSuggestionsFetchRequested={onSuggestionsFetchRequested}
-                        onSuggestionsClearRequested={onSuggestionsClearRequested}
-                        getSuggestionValue={getSuggestionValue}
-                        renderSuggestion={renderSuggestion}
-                        inputProps={inputProps}
-                        onSuggestionSelected={(event, { suggestion }) => {
-                            // Autofill the search bar and close the suggestion list
-                            setUserInput(getSuggestionValue(suggestion)); // Updated to use setUserInput
-                            onSuggestionsClearRequested();
-                        }}
-                    />
+                    <div className="autosuggest-container">
+                        <Autosuggest
+                            suggestions={suggestions}
+                            onSuggestionsFetchRequested={onSuggestionsFetchRequested}
+                            onSuggestionsClearRequested={onSuggestionsClearRequested}
+                            getSuggestionValue={getSuggestionValue}
+                            renderSuggestion={renderSuggestion}
+                            inputProps={inputProps}
+                            onSuggestionSelected={(event, { suggestion }) => {
+                                // Autofill the search bar and close the suggestion list
+                                setUserInput(getSuggestionValue(suggestion)); // Updated to use setUserInput
+                                onSuggestionsClearRequested();
+                            }}
+                        />
+                    </div>
                 </div>
             </Modal.Body>
             <Modal.Footer>
                 <button className="search-close" onClick={onClose}>Close</button>
-                <button onClick={() => { handleCLick() }}>Search</button>
+                <button className="search-button" onClick={() => { handleCLick() }}>Search</button>
             </Modal.Footer>
         </Modal>
     );
