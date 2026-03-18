@@ -27,7 +27,7 @@ function NormalGame() {
         if(inputLength === 0) return [];
         
         try {
-            const response = await axios.post('http://localhost:5000/search_players', { searchTerm: value });
+            const response = await axios.post('http://localhost:5001/search_players', { searchTerm: value });
             return response.data;  // Returns a list of suggestions
         } catch (error) {
             console.error('Error fetching data: ', error);
@@ -51,13 +51,6 @@ function NormalGame() {
 
     const handleSearchChange = (event, { newValue }) => {
         setUserInput(newValue);
-    };
-
-    // Autosuggest component's props
-    const inputProps = {
-        placeholder: "Type a player's name",
-        value,
-        onChange: onChange
     };
 
     // When suggestion is clicked, Autosuggest needs to populate the input
@@ -87,7 +80,7 @@ function NormalGame() {
 
                 console.log(playerName); // Log the extracted player name
 
-                const response = await axios.post('http://localhost:5000/get_player', { playerName: playerName });
+                const response = await axios.post('http://localhost:5001/get_player', { playerName: playerName });
                 const values = response.data;
 
                 if (values && values.includes(triviaRow[y]) && values.includes(triviaColumn[x])) {
