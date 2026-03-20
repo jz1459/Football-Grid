@@ -1,0 +1,51 @@
+# New stack: PostgreSQL + Express/TypeScript API + existing CRA frontend.
+# Use while migrating off the MySQL + Flask stack (docker-compose.yml).
+#
+#   docker compose -f docker-compose.postgres.yml up --build
+#
+# Then load roster data (see backend-ts/README.md “Docker”).
+#
+# Frontend calls http://localhost:5001 (published below).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: apppass
+      POSTGRES_DB: football_grid
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d football_grid"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend-ts:
+    build:
+      context: ./backend-ts
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://app:apppass@postgres:5432/football_grid
+      PORT: "5001"
+    ports:
+      - "5001:5001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend-ts
+
+volumes:
+  postgres_data:

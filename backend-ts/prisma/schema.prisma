@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id         Int    @id @default(autoincrement())
+  name       String @db.VarChar(40)
+  position   String @db.VarChar(10)
+  playerTeams PlayerTeam[]
+
+  @@unique([name, position], name: "player_unique")
+  @@map("players")
+}
+
+model Team {
+  id           Int    @id @default(autoincrement())
+  name         String @db.VarChar(25)
+  playerTeams  PlayerTeam[]
+
+  @@map("teams")
+}
+
+model PlayerTeam {
+  playerId Int
+  teamId   Int
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([playerId, teamId])
+  @@map("player_team_association")
+}
