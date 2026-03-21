@@ -1,11 +1,13 @@
-# New stack: PostgreSQL + Express/TypeScript API + existing CRA frontend.
+# New stack: PostgreSQL + Express/TypeScript API + Next.js frontend (frontend-ts).
 # Use while migrating off the MySQL + Flask stack (docker-compose.yml).
 #
 #   docker compose -f docker-compose.postgres.yml up --build
 #
 # Then load roster data (see backend-ts/README.md “Docker”).
 #
-# Frontend calls http://localhost:5001 (published below).
+# The UI is built with NEXT_PUBLIC_API_URL=http://localhost:5001 so the browser
+# (on your machine) talks to the published API port. If you open the app via a
+# non-localhost host, rebuild with a matching build arg (see frontend service).
 
 services:
   postgres:
@@ -40,8 +42,11 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend-ts
       dockerfile: Dockerfile
+      args:
+        # Baked at Next build time — must be reachable from the user’s browser
+        NEXT_PUBLIC_API_URL: http://localhost:5001
     ports:
       - "3000:3000"
     depends_on:

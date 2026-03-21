@@ -37,7 +37,7 @@ docker compose -f docker-compose.postgres.yml up --build
 ```
 
 - API: [http://localhost:5001](http://localhost:5001) (same port the frontend already uses)
-- App: [http://localhost:3000](http://localhost:3000)
+- App: [http://localhost:3000](http://localhost:3000) — **Next.js** image from `frontend-ts/` (compose `frontend` service). Override at build time if needed: `docker compose ... build --build-arg NEXT_PUBLIC_API_URL=http://your-host:5001 frontend`.
 - Postgres is also published on `5432` for one-off tools / loading data
 
 After tables exist (the API container runs `prisma db push` on startup), load roster data from the host with the **same** `DATABASE_URL` (Postgres published on `5432`):
