@@ -74,13 +74,16 @@ function NormalGame() {
 
         if (userInput.length !== 0) {
             try {
-                // Extract the player's name from userInput before sending it to the endpoint
-                // Assuming the format is "PlayerName (Position)"
-                const playerName = userInput.split(' (')[0]; // This will get just the name part
+                // "Name (QB)" or "Name (DL / LB)" — send position so homonyms (e.g. two Josh Allens) stay distinct.
+                const trimmed = userInput.trim();
+                const paren = trimmed.match(/^(.+?)\s+\((.+)\)\s*$/);
+                const playerName = paren ? paren[1].trim() : trimmed;
+                const position = paren ? paren[2].trim() : undefined;
 
-                console.log(playerName); // Log the extracted player name
-
-                const response = await axios.post('http://localhost:5001/get_player', { playerName: playerName });
+                const response = await axios.post('http://localhost:5001/get_player', {
+                    playerName,
+                    ...(position ? { position } : {}),
+                });
                 const values = response.data;
 
                 if (values && values.includes(triviaRow[y]) && values.includes(triviaColumn[x])) {

@@ -11,6 +11,8 @@ model Player {
   id         Int    @id @default(autoincrement())
   name       String @db.VarChar(40)
   position   String @db.VarChar(10)
+  // nflverse gsis_id — one row per NFL player when set (avoids DL/LB split rows).
+  gsisId     String? @unique @map("gsis_id") @db.VarChar(32)
   playerTeams PlayerTeam[]
 
   @@unique([name, position], name: "player_unique")

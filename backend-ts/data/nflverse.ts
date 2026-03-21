@@ -4,11 +4,13 @@
  *
  * This is season-level snapshot data (not weekly union). For weekly history,
  * use `load_rosters_weekly()` in R or add a separate importer later.
+ *
+ * Seed uses every row’s `team` as affiliation regardless of `status` (CUT, UFA, etc.).
  */
 
 import { parse } from "csv-parse/sync";
 
-import { ESPN_POS_TO_GRID } from "./espn";
+import { POSITION_ABBREV_TO_GRID } from "./positions";
 
 /** GitHub release assets (stable URL; redirects to CDN). */
 export const NFLVERSE_ROSTER_CSV_TMPL =
@@ -34,7 +36,7 @@ const TEAM_ABBREV_NORMALIZE: Record<string, string> = {
 };
 
 /**
- * Map nflverse `team` abbrev → Football Grid `Team.name` (aligned with ESPN seed list).
+ * Map nflverse `team` abbrev → Football Grid `Team.name` (aligned with nflverse teams CSV + franchise renames).
  * Covers historical franchises (STL Rams → Los Angeles Rams, etc.).
  */
 const FRANCHISE_DISPLAY_OVERRIDES: Record<string, string> = {
@@ -50,17 +52,6 @@ const FRANCHISE_DISPLAY_OVERRIDES: Record<string, string> = {
   WSH: "Washington Commanders",
 };
 
-/** Roster `status` values to skip (clearly not on club roster for grid purposes). */
-const EXCLUDED_STATUSES = new Set([
-  "CUT",
-  "UFA",
-  "TRC",
-  "TRD",
-  "TRT",
-  "RFA",
-  "NWT",
-]);
-
 export interface NflverseRosterRow {
   season: string;
   team: string;
@@ -68,8 +59,11 @@ export interface NflverseRosterRow {
   depth_chart_position: string;
   status: string;
   full_name: string;
+  /** NFL GSIS id when present — stable across seasons/positions. */
+  gsis_id: string;
 }
 
+/** Maps legacy / alias nflverse team abbreviations (e.g. `JAC`) to the canonical abbrev used in URLs and maps. */
 function normalizeTeamAbbrev(abbr: string): string {
   const u = abbr.trim().toUpperCase();
   return TEAM_ABBREV_NORMALIZE[u] ?? u;
@@ -103,10 +97,12 @@ export async function fetchNflverseTeamAbbrevToDisplayName(): Promise<Map<string
   return map;
 }
 
+/** Absolute URL for the nflverse `roster_{season}.csv` release asset. */
 export function rosterCsvUrl(season: number): string {
   return NFLVERSE_ROSTER_CSV_TMPL.replace("{season}", String(season));
 }
 
+/** Downloads and parses one season’s roster CSV into trimmed `NflverseRosterRow` objects. */
 export async function fetchNflverseRosterRows(season: number): Promise<NflverseRosterRow[]> {
   const url = rosterCsvUrl(season);
   const res = await fetch(url, { headers: NFLVERSE_REQUEST_HEADERS });
@@ -123,24 +119,24 @@ export async function fetchNflverseRosterRows(season: number): Promise<NflverseR
     depth_chart_position: row.depth_chart_position ?? "",
     status: row.status ?? "",
     full_name: row.full_name ?? "",
+    gsis_id: (row.gsis_id ?? "").trim(),
   }));
 }
 
+/**
+ * Maps nflverse `position` / `depth_chart_position` to the app’s grid bucket via `POSITION_ABBREV_TO_GRID`
+ * (e.g. `OLB` → `LB`). Returns `null` if the abbrev is unknown.
+ */
 export function gridPositionFromNflverseRow(row: NflverseRosterRow): string | null {
   const raw = row.position?.trim() || row.depth_chart_position?.trim();
   if (!raw) return null;
-  const g = ESPN_POS_TO_GRID[raw];
+  const g = POSITION_ABBREV_TO_GRID[raw];
   return g ?? null;
 }
 
-export function shouldIncludeNflverseStatus(status: string): boolean {
-  const s = status.trim().toUpperCase();
-  if (!s) return true;
-  return !EXCLUDED_STATUSES.has(s);
-}
-
 /**
- * Resolve nflverse roster `team` abbrev to Football Grid `Team.name`.
+ * Turns a roster row’s `team` abbrev into the display string stored on `Team.name` in the DB
+ * (teams CSV + normalizations + franchise renames). Returns `null` if the abbrev is unknown.
  */
 export function resolveTeamDisplayName(
   teamAbbrev: string,

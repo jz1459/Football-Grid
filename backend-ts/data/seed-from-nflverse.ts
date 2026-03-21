@@ -1,21 +1,19 @@
 /**
  * Seed Postgres from nflverse season rosters (CSV — same source as R `nflreadr::load_rosters`).
- * Keeps ESPN seed separate: `npm run db:seed` still uses `seed-from-espn.ts`.
  *
- * Run: npm run db:seed:nflverse
+ * Run: npm run db:seed
  */
 import { config } from "dotenv";
 import { resolve } from "path";
 
 import { PrismaClient } from "@prisma/client";
 
-import { seasonRangeInclusive } from "./espn";
+import { seasonRangeInclusive } from "./positions";
 import {
   fetchNflverseRosterRows,
   fetchNflverseTeamAbbrevToDisplayName,
   gridPositionFromNflverseRow,
   resolveTeamDisplayName,
-  shouldIncludeNflverseStatus,
 } from "./nflverse";
 
 config({ path: resolve(__dirname, "../.env") });
@@ -33,6 +31,7 @@ const SEASON_RANGE: { start: number; end: number } | null = { start: 2015, end: 
 const PAUSE_MS = 200;
 // --- end config ---
 
+/** Derives the ordered list of NFL seasons to download from `SEASON_YEARS` or `SEASON_RANGE`. */
 function resolveSeasons(): number[] {
   if (SEASON_YEARS.length > 0) {
     return [...new Set(SEASON_YEARS)].sort((a, b) => a - b);
@@ -45,15 +44,63 @@ function resolveSeasons(): number[] {
 
 const prisma = new PrismaClient();
 
+/** Promise-based delay between remote season fetches to reduce burst load on GitHub / CDN. */
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/** Truncates player names to the DB column width (`players.name` VarChar). */
 function clipName(name: string, maxLen: number): string {
   if (name.length <= maxLen) return name;
   return name.slice(0, maxLen);
 }
 
+/**
+ * Ensure one Player row for this nflverse identity: GSIS wins; merge away a separate (name, position)
+ * row when it would block updating the GSIS row (e.g. DL/LB duplicate rows left from older data).
+ */
+async function upsertPlayerFromNflverse(name: string, pos: string, gsis: string): Promise<{ id: number }> {
+  const byGsis = await prisma.player.findUnique({ where: { gsisId: gsis } });
+  const byNamePos = await prisma.player.findUnique({
+    where: { player_unique: { name, position: pos } },
+  });
+
+  if (byGsis) {
+    return prisma.$transaction(async (tx) => {
+      if (byNamePos && byNamePos.id !== byGsis.id) {
+        const links = await tx.playerTeam.findMany({ where: { playerId: byNamePos.id } });
+        for (const link of links) {
+          await tx.playerTeam.upsert({
+            where: { playerId_teamId: { playerId: byGsis.id, teamId: link.teamId } },
+            create: { playerId: byGsis.id, teamId: link.teamId },
+            update: {},
+          });
+        }
+        await tx.player.delete({ where: { id: byNamePos.id } });
+      }
+      return tx.player.update({
+        where: { id: byGsis.id },
+        data: { name, position: pos },
+      });
+    });
+  }
+
+  if (byNamePos) {
+    return prisma.player.update({
+      where: { id: byNamePos.id },
+      data: { gsisId: gsis, name, position: pos },
+    });
+  }
+
+  return prisma.player.create({
+    data: { name, position: pos, gsisId: gsis },
+  });
+}
+
+/**
+ * For each configured season: fetch nflverse CSV, ensure `Team` + `Player` (+ `gsisId` merge rules),
+ * then `PlayerTeam` upserts for every roster row that passes team/position filters.
+ */
 async function main(): Promise<void> {
   const seasons = resolveSeasons();
   const abbrevToDisplay = await fetchNflverseTeamAbbrevToDisplayName();
@@ -70,8 +117,6 @@ async function main(): Promise<void> {
     for (const row of rows) {
       const abbr = row.team.trim().toUpperCase();
       if (!SEED_ALL_NFL_TEAMS && !testSet.has(abbr)) continue;
-
-      if (!shouldIncludeNflverseStatus(row.status)) continue;
 
       const teamName = resolveTeamDisplayName(row.team, abbrevToDisplay);
       if (!teamName) {
@@ -91,13 +136,14 @@ async function main(): Promise<void> {
         team = await prisma.team.create({ data: { name: teamName } });
       }
 
-      const player = await prisma.player.upsert({
-        where: {
-          player_unique: { name, position: pos },
-        },
-        create: { name, position: pos },
-        update: {},
-      });
+      const gsis = row.gsis_id?.trim() ?? "";
+      const player = gsis
+        ? await upsertPlayerFromNflverse(name, pos, gsis)
+        : await prisma.player.upsert({
+            where: { player_unique: { name, position: pos } },
+            create: { name, position: pos },
+            update: {},
+          });
 
       await prisma.playerTeam.upsert({
         where: {

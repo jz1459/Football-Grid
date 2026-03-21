@@ -7,8 +7,7 @@
 3. Generate Prisma client: `npm run db:generate`
 4. Create tables: `npm run db:push` (or `npm run db:migrate` for a migration file)
 5. **Populate Postgres:** keep `DATABASE_URL` only in **`backend-ts/.env`** (same DB as step 1).
-   - **ESPN:** `npm run db:seed` → `data/seed-from-espn.ts` (JSON; core API fallback for empty site rosters).
-   - **nflverse (recommended for historical season snapshots):** `npm run db:seed:nflverse` → `data/seed-from-nflverse.ts` (CSV from [nflverse-data](https://github.com/nflverse/nflverse-data/releases/tag/rosters), same source as R `load_rosters()`). Edit constants at the top of each seed file.
+   - **nflverse:** `npm run db:seed` → `data/seed-from-nflverse.ts` (CSV from [nflverse-data](https://github.com/nflverse/nflverse-data/releases/tag/rosters), same source as R `load_rosters()`). Edit `SEASON_RANGE` / `SEASON_YEARS` at the top of that file.
    - **Pro-Football-Reference** (HTML, Cloudflare-prone): Python pipeline in `backend/data.py` with `DATABASE_URL` in `backend/.env` if you need PFR → Postgres.
 
 ## Run
@@ -17,6 +16,17 @@
 - Production: `npm run build && npm start`
 
 Server listens on `PORT` (default 5001).
+
+## Code map (reading order)
+
+Trace the app top-down:
+
+1. **`src/index.ts`** — Express app, CORS/JSON middleware, mounts legacy routes and `/players/*`.
+2. **`src/routes/players.ts`** — `searchHandler` / `validateHandler`: Prisma queries, GSIS merge for autocomplete, homonym handling for validate. Each exported handler has a JSDoc block above it.
+3. **`prisma/schema.prisma`** — `Player` (`@@unique([name, position])`, optional `gsisId`), `Team`, `PlayerTeam`.
+4. **nflverse ingest** — **`data/positions.ts`** (`POSITION_ABBREV_TO_GRID`, `seasonRangeInclusive`) → **`data/nflverse.ts`** (CSV URLs, team abbrev → display name) → **`data/seed-from-nflverse.ts`** (season loop, `upsertPlayerFromNflverse` for GSIS + duplicate merge). Constants at the top of the seed file.
+
+Function-level comments live in those files as `/** … */` JSDoc so you can follow behavior without leaving the editor.
 
 ## Docker (full stack with existing frontend)
 
@@ -47,7 +57,4 @@ npm install && npm run db:generate && npm run db:seed
 
 Legacy paths (so the current CRA frontend works without changes): `POST /search_players` (same as `/players/search`), `POST /get_player` (same as `/players/validate`).
 
-## Rate limits
-
-- Search: 100 requests per 15 minutes per IP
-- Validate: 60 requests per 15 minutes per IP
+There is no rate limiting on these routes right now; add middleware (e.g. `express-rate-limit`) before production if you need it.

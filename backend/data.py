@@ -360,7 +360,7 @@ def scrape_players(team_abbreviations, positions_mapping):
     """
     Pro-Football-Reference only: HTML roster tables (Playwright or requests). Cloudflare often blocks requests.
 
-    For loading Postgres from **ESPN** JSON, use `npm run db:seed` in `backend-ts/` (see `data/seed-from-espn.ts`).
+    For loading Postgres from **nflverse** CSVs, use `npm run db:seed` in `backend-ts/` (see `data/seed-from-nflverse.ts`).
 
     PFR: `SCRAPE_SEASON_YEAR` selects a single year; default range 2013–2022 if unset.
     """
@@ -433,7 +433,7 @@ def _exit_db_help_postgres(err: Exception) -> None:
     print(
         "\nCould not connect to PostgreSQL. Set DATABASE_URL and ensure the server is running "
         "(e.g. docker compose -f docker-compose.postgres.yml up -d postgres).\n"
-        "To load rosters from ESPN into Postgres, use backend-ts: `npm run db:seed` (see backend-ts/data/).\n"
+        "To load rosters from nflverse into Postgres, use backend-ts: `npm run db:seed` (see backend-ts/data/).\n"
         f"Underlying error: {err}\n",
         file=sys.stderr,
     )
