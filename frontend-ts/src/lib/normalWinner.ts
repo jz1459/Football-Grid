@@ -1,22 +1,36 @@
 /**
- * Scans all eight tic-tac-toe lines; returns `'X'` or `'O'` if one player owns a full line,
- * otherwise `null`.
+ * Builds every winning line for an `n×n` tic-tac-toe board: `n` rows, `n` columns, 2 diagonals.
+ * Each line lists flat indices `0 .. n*n-1`.
  */
-export function calculateWinner(squares: (string | null)[]): "X" | "O" | null {
-  const lines: [number, number, number][] = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6],
-  ];
+function winningLinesForSize(n: number): number[][] {
+  if (n < 2) return [];
 
-  for (const [a, b, c] of lines) {
-    const v = squares[a];
-    if (v && v === squares[b] && v === squares[c]) {
+  const lines: number[][] = [];
+
+  for (let r = 0; r < n; r += 1) {
+    lines.push(Array.from({ length: n }, (_, c) => r * n + c));
+  }
+
+  for (let c = 0; c < n; c += 1) {
+    lines.push(Array.from({ length: n }, (_, r) => r * n + c));
+  }
+
+  lines.push(Array.from({ length: n }, (_, i) => i * (n + 1)));
+  lines.push(Array.from({ length: n }, (_, i) => (i + 1) * (n - 1)));
+
+  return lines;
+}
+
+/**
+ * Returns `'X' | 'O'` if that player owns a full line on an `n×n` board, else `null`.
+ * `squares.length` must be `n * n`.
+ */
+export function calculateWinner(squares: (string | null)[], n: number): "X" | "O" | null {
+  const lines = winningLinesForSize(n);
+  for (const line of lines) {
+    const v = squares[line[0]!];
+    if (!v) continue;
+    if (line.every((idx) => squares[idx] === v)) {
       return v as "X" | "O";
     }
   }

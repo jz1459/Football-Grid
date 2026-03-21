@@ -5,14 +5,28 @@ import Square from "./Square";
 type NormalBoardProps = {
   squares: (string | null)[];
   onSquareClick: (index: number) => void;
+  /** Board dimension (3, 4, or 5). */
+  size: number;
+  /** Square width/height in pixels (same for every cell). */
+  cellSize: number;
 };
 
-/** 3×3 grid of `Square` components; `onSquareClick` receives flat index `0..8`. */
-export default function NormalBoard({ squares, onSquareClick }: NormalBoardProps) {
+/** `size×size` grid of `Square` components; `onSquareClick` receives flat index `0 .. size*size-1`. */
+export default function NormalBoard({ squares, onSquareClick, size, cellSize }: NormalBoardProps) {
+  const px = size * cellSize;
+
   return (
-    <div className="grid h-[360px] w-[360px] max-w-full grid-cols-3 grid-rows-3 text-center text-2xl text-white">
+    <div
+      className="grid max-w-full text-center text-white"
+      style={{
+        width: px,
+        height: px,
+        gridTemplateColumns: `repeat(${size}, ${cellSize}px)`,
+        gridTemplateRows: `repeat(${size}, ${cellSize}px)`,
+      }}
+    >
       {squares.map((square, i) => (
-        <Square key={i} value={square} onClick={() => onSquareClick(i)} />
+        <Square key={i} value={square} cellSize={cellSize} onClick={() => onSquareClick(i)} />
       ))}
     </div>
   );

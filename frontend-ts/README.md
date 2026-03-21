@@ -20,10 +20,10 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Code map (reading order)
 
 1. **`src/app/layout.tsx`** / **`src/app/page.tsx`** / **`src/app/globals.css`** — App Router shell, metadata, global styles (incl. autosuggest dropdown CSS).
-2. **`src/components/NormalGame.tsx`** — All game state, API calls, trivia randomization, win detection (`calculateWinner`).
+2. **`src/components/NormalGame.tsx`** — Game state, selectable **3×3 / 4×4 / 5×5** grid, API calls, trivia randomization (`2n` teams for `n×n`), win/draw detection via `calculateWinner(board, n)`.
 3. **`src/components/NormalBoard.tsx`** / **`Square.tsx`** / **`TriviaCategories.tsx`** — Presentational grid pieces.
 4. **`src/components/PlayerSearch.tsx`** — Modal + `react-autosuggest` wired to parent callbacks.
-5. **`src/lib/api.ts`**, **`normalWinner.ts`**, **`teams.ts`** — Small pure helpers / constants.
+5. **`src/lib/api.ts`**, **`normalWinner.ts`** (generic `n×n` lines), **`teams.ts`** — Small pure helpers / constants.
 6. **`src/types/player.ts`** — Shared suggestion shape.
 
 Each exported function and major component has a `/** … */` JSDoc block in source.
