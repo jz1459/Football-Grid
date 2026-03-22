@@ -16,14 +16,19 @@
 
 Server listens on `PORT` (default 5001).
 
+**Board headers:** `POST /boards/random` `{ gridSize }` returns `{ triviaRow, triviaColumn }` such that every cell has ≥1 player linked to both teams. Valid team-pairs come only from committed **`data/valid-pairs.json`** (no cold `PlayerTeam` scan). Regenerate it with **`npm run db:load_data`** after changing roster data, or call **`POST /boards/refresh-pairs`** to rebuild from the DB without a full re-seed. The Docker image copies **`data/`** so the file is present at container start.
+
 ## Code map (reading order)
 
 Trace the app top-down:
 
-1. **`src/index.ts`** — Express app, CORS/JSON middleware, mounts legacy routes and `/players/*`.
-2. **`src/routes/players.ts`** — `searchHandler` / `validateHandler`: Prisma queries, GSIS merge for autocomplete, homonym handling for validate. Each exported handler has a JSDoc block above it.
-3. **`prisma/schema.prisma`** — `Player` (`@@unique([name, position])`, optional `gsisId`), `Team`, `PlayerTeam`.
-4. **nflverse ingest** — **`data/positions.ts`** (`POSITION_ABBREV_TO_GRID`, `seasonRangeInclusive`) → **`data/nflverse.ts`** (CSV URLs, team abbrev → display name) → **`data/load_data.ts`** (season loop, `upsertPlayerFromNflverse` for GSIS + duplicate merge). Constants at the top of that file.
+1. **`src/index.ts`** — Express app, CORS/JSON, legacy routes, `/boards/*`, `/players/*`.
+2. **`src/routes/boards.ts`** — `POST /random` solvable headers; `POST /refresh-pairs` rebuilds JSON + cache.
+3. **`src/lib/generateValidPairs.ts`** — Build valid pair set from DB; read/write `data/valid-pairs.json`.
+4. **`src/lib/generateValidBoard.ts`** — Cached `getValidPairSet` (JSON only); `sampleValidBoard`.
+5. **`src/routes/players.ts`** — `searchHandler` / `validateHandler` (uses **`src/db.ts`** Prisma singleton).
+6. **`prisma/schema.prisma`** — `Player` (`@@unique([name, position])`, optional `gsisId`), `Team`, `PlayerTeam`.
+7. **nflverse ingest** — **`data/positions.ts`** → **`data/nflverse.ts`** → **`data/load_data.ts`** (`npm run db:load_data`, also writes `data/valid-pairs.json`).
 
 Function-level comments live in those files as `/** … */` JSDoc so you can follow behavior without leaving the editor.
 

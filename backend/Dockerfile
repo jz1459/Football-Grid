@@ -11,6 +11,7 @@ RUN npm install
 
 COPY tsconfig.json ./
 COPY src ./src
+COPY data ./data
 
 RUN npm run db:generate && npm run build
 

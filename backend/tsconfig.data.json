@@ -10,5 +10,5 @@
     "resolveJsonModule": true,
     "noEmit": true
   },
-  "include": ["data/**/*.ts"]
+  "include": ["data/**/*.ts", "src/lib/generateValidPairs.ts"]
 }

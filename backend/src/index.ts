@@ -6,6 +6,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { playersRouter, searchHandler, validateHandler } from "./routes/players";
+import { boardsRouter } from "./routes/boards";
 
 const app = express();
 const port = process.env.PORT ?? 5001;
@@ -28,6 +29,9 @@ app.post("/search_players", searchHandler);
 
 /** Resolve a chosen player to sorted list of team display names they are linked to. */
 app.post("/get_player", validateHandler);
+
+/** Random row/column headers such that every square has ≥1 player with both teams in the DB. */
+app.use("/boards", boardsRouter);
 
 app.use("/players", playersRouter);
 

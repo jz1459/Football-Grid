@@ -8,7 +8,6 @@ import PlayerSearch from "./PlayerSearch";
 import TriviaCategories from "./TriviaCategories";
 import { calculateWinner } from "@/lib/normalWinner";
 import { getApiBase } from "@/lib/api";
-import { NFL_TEAMS } from "@/lib/teams";
 import type { PlayerSuggestion } from "@/types/player";
 
 export type GridSize = 3 | 4 | 5;
@@ -16,11 +15,12 @@ export type GridSize = 3 | 4 | 5;
 const GRID_OPTIONS: GridSize[] = [3, 4, 5];
 
 /**
- * Main game: random NFL teams label the row/column headers; players take turns claiming a square by
- * naming someone who played for **both** header teams. Uses `search_players` / `get_player` on the API.
+ * Main game: NFL teams label row/column headers (`POST /boards/random` ensures every square has a valid
+ * roster answer); turns claim a square by naming someone who played for **both** header teams.
  */
 export default function NormalGame() {
   const [gridSize, setGridSize] = useState<GridSize>(3);
+  const [boardLoading, setBoardLoading] = useState(false);
 
   const cellSize = useMemo(
     () => Math.max(44, Math.min(120, Math.floor(360 / gridSize))),
@@ -145,36 +145,29 @@ export default function NormalGame() {
     }
   };
 
-  /** Picks `2 * gridSize` distinct random teams: first `gridSize` for the top row, next `gridSize` for the left column. */
-  const fillTrivia = useCallback(() => {
-    const n = gridSize;
-    const need = 2 * n;
-    const usedIndexes: number[] = [];
-    const usedRow: string[] = [];
-    const usedCol: string[] = [];
-    const len = NFL_TEAMS.length;
-
-    while (usedIndexes.length < need) {
-      const index = Math.floor(Math.random() * len);
-      if (!usedIndexes.includes(index)) {
-        usedIndexes.push(index);
-        if (usedIndexes.length <= n) {
-          usedRow.push(NFL_TEAMS[index]!);
-        } else {
-          usedCol.push(NFL_TEAMS[index]!);
-        }
-      }
+  /** Resets the board, marks the session as started, X moves first, and loads solvable headers from the API. */
+  const startGame = async () => {
+    setBoardLoading(true);
+    try {
+      const { data } = await axios.post<{ triviaRow: string[]; triviaColumn: string[] }>(
+        `${api}/boards/random`,
+        { gridSize },
+      );
+      setTriviaRow(data.triviaRow);
+      setTriviaColumn(data.triviaColumn);
+      setBoard(Array(gridSize * gridSize).fill(null));
+      setNewGame(true);
+      setXIsNext(true);
+    } catch (e) {
+      console.error("Error fetching board:", e);
+      const msg =
+        axios.isAxiosError(e) && e.response?.data && typeof (e.response.data as { error?: string }).error === "string"
+          ? (e.response.data as { error: string }).error
+          : "Could not start game — is the API running and roster data loaded?";
+      window.alert(msg);
+    } finally {
+      setBoardLoading(false);
     }
-    setTriviaRow(usedRow);
-    setTriviaColumn(usedCol);
-  }, [gridSize]);
-
-  /** Resets the board, marks the session as started, X moves first, and draws new random headers. */
-  const startGame = () => {
-    setBoard(Array(gridSize * gridSize).fill(null));
-    setNewGame(true);
-    setXIsNext(true);
-    fillTrivia();
   };
 
   const statusMessage = winner
@@ -238,10 +231,11 @@ export default function NormalGame() {
           </p>
           <button
             type="button"
-            className="start-game relative ml-0 overflow-hidden border border-white bg-transparent px-8 py-4 text-xl font-bold text-white transition-colors duration-300 before:absolute before:left-0 before:top-0 before:-z-10 before:h-full before:w-0 before:bg-white before:transition-all before:duration-300 before:content-[''] hover:text-neutral-900 hover:before:w-full min-[481px]:ml-[150px]"
-            onClick={startGame}
+            disabled={boardLoading}
+            className="start-game relative ml-0 overflow-hidden border border-white bg-transparent px-8 py-4 text-xl font-bold text-white transition-colors duration-300 before:absolute before:left-0 before:top-0 before:-z-10 before:h-full before:w-0 before:bg-white before:transition-all before:duration-300 before:content-[''] hover:text-neutral-900 hover:before:w-full enabled:min-[481px]:ml-[150px] disabled:opacity-50"
+            onClick={() => void startGame()}
           >
-            {newGame ? "New Game" : "Start Game"}
+            {boardLoading ? "Loading…" : newGame ? "New Game" : "Start Game"}
           </button>
         </div>
 

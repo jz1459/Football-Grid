@@ -15,6 +15,7 @@ import {
   gridPositionFromNflverseRow,
   resolveTeamDisplayName,
 } from "./nflverse";
+import { persistValidPairsFromDb } from "../src/lib/generateValidPairs";
 
 config({ path: resolve(__dirname, "../.env") });
 
@@ -163,6 +164,9 @@ async function main(): Promise<void> {
   console.log(
     `Done (nflverse). Total roster row operations: ${totalRosterRowsApplied} (Player rows are fewer — unique name+position)`,
   );
+
+  const pairSet = await persistValidPairsFromDb(prisma);
+  console.log(`Wrote data/valid-pairs.json (${pairSet.size} valid team pairs).`);
 }
 
 main()
