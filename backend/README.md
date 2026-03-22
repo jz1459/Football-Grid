@@ -7,7 +7,7 @@
 3. Generate Prisma client: `npm run db:generate`
 4. Create tables: `npm run db:push` (or `npm run db:migrate` for a migration file)
 5. **Populate Postgres:** keep `DATABASE_URL` only in **`backend/.env`** (same DB as step 1).
-   - **nflverse:** `npm run db:seed` → `data/load_data.ts` (CSV from [nflverse-data](https://github.com/nflverse/nflverse-data/releases/tag/rosters), same source as R `load_rosters()`). Edit `SEASON_RANGE` / `SEASON_YEARS` at the top of that file.
+   - **nflverse:** `npm run db:load_data` → `data/load_data.ts` (CSV from [nflverse-data](https://github.com/nflverse/nflverse-data/releases/tag/rosters), same source as R `load_rosters()`). Edit repo **`config/game.json`** for seasons and team seeding (optional `GAME_CONFIG_PATH` in `.env`).
 
 ## Run
 
@@ -46,7 +46,7 @@ docker compose up --build
 |--------|----------------|
 | `./start.sh` | `docker compose up -d --build` |
 | `./stop.sh` | `docker compose down` |
-| `./load_data.sh` | `npm install`, `db:generate`, `db:seed` in `backend/` — uses **`backend/.env`** for `DATABASE_URL` (same as `npm run dev` / Prisma). |
+| `./load_data.sh` | `npm install`, `db:generate`, `db:load_data` in `backend/` — uses **`backend/.env`** for `DATABASE_URL` (same as `npm run dev` / Prisma). |
 
 - API: [http://localhost:5001](http://localhost:5001)
 - App: [http://localhost:3000](http://localhost:3000) — **Next.js** image from `frontend/` (compose service `frontend`). Override at build time if needed: `docker compose build --build-arg NEXT_PUBLIC_API_URL=http://your-host:5001 frontend`.
@@ -57,7 +57,7 @@ After tables exist (the API container runs `prisma db push` on startup), load ro
 ```bash
 cd backend && cp .env.example .env
 # Set DATABASE_URL=postgresql://app:apppass@localhost:5432/football_grid
-npm install && npm run db:generate && npm run db:seed
+npm install && npm run db:generate && npm run db:load_data
 ```
 
 ## API

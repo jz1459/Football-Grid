@@ -22,17 +22,28 @@ function winningLinesForSize(n: number): number[][] {
 }
 
 /**
- * Returns `'X' | 'O'` if that player owns a full line on an `n×n` board, else `null`.
+ * Returns the flat indices of the first completed line (row, column, or diagonal), or `null`.
  * `squares.length` must be `n * n`.
  */
-export function calculateWinner(squares: (string | null)[], n: number): "X" | "O" | null {
+export function getWinningLine(squares: (string | null)[], n: number): number[] | null {
   const lines = winningLinesForSize(n);
   for (const line of lines) {
     const v = squares[line[0]!];
     if (!v) continue;
     if (line.every((idx) => squares[idx] === v)) {
-      return v as "X" | "O";
+      return line;
     }
   }
   return null;
+}
+
+/**
+ * Returns `'X' | 'O'` if that player owns a full line on an `n×n` board, else `null`.
+ * `squares.length` must be `n * n`.
+ */
+export function calculateWinner(squares: (string | null)[], n: number): "X" | "O" | null {
+  const line = getWinningLine(squares, n);
+  if (!line?.length) return null;
+  const v = squares[line[0]!];
+  return v as "X" | "O";
 }

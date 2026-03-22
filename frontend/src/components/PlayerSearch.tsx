@@ -13,17 +13,19 @@ type PlayerSearchProps = {
   onClose: () => void;
   userInput: string;
   onUserInputChange: (value: string) => void;
-  checkPlayer: (squareIndex: number) => void;
+  checkPlayer: (squareIndex: number) => Promise<boolean>;
   modalData: number;
   suggestions: PlayerSuggestion[];
   onSuggestionsFetchRequested: (params: SuggestionsFetchRequestedParams) => void;
   onSuggestionsClearRequested: () => void;
   getSuggestionValue: (suggestion: PlayerSuggestion) => string;
+  /** From `GET /config` when API is reachable; otherwise a generic fallback is shown. */
+  eligibilityLine?: string | null;
 };
 
 /**
  * Modal overlay with `react-autosuggest` for picking a player; **Search** runs validation on the parent
- * (`checkPlayer` then `onClose`). **Escape** or backdrop click closes without submitting.
+ * (`checkPlayer` then `onClose` on success). **Escape** or backdrop click closes without submitting.
  */
 export default function PlayerSearch({
   show,
@@ -36,6 +38,7 @@ export default function PlayerSearch({
   onSuggestionsFetchRequested,
   onSuggestionsClearRequested,
   getSuggestionValue,
+  eligibilityLine,
 }: PlayerSearchProps) {
   /** Registers a window `keydown` listener to close on Escape while the modal is open. */
   useEffect(() => {
@@ -54,10 +57,10 @@ export default function PlayerSearch({
     onUserInputChange(newValue);
   };
 
-  /** Submits the current input for the square that opened the modal, then dismisses the dialog. */
-  const handleSubmit = () => {
-    checkPlayer(modalData);
-    onClose();
+  /** Submits the current input for the square that opened the modal; closes only when validation succeeds. */
+  const handleSubmit = async () => {
+    const ok = await checkPlayer(modalData);
+    if (ok) onClose();
   };
 
   const inputProps = {
@@ -65,7 +68,7 @@ export default function PlayerSearch({
     value: userInput,
     onChange: handleSearch,
     className:
-      "w-full rounded border border-neutral-300 px-3 py-2 text-neutral-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500",
+      "w-full rounded-lg border border-border bg-elevated px-3 py-2.5 text-foreground placeholder:text-foreground-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40",
   };
 
   /** One row in the suggestion dropdown; keyboard navigation toggles `isHighlighted` styling. */
@@ -74,8 +77,8 @@ export default function PlayerSearch({
     { isHighlighted }: RenderSuggestionParams,
   ) => (
     <div
-      className={`cursor-pointer border-b border-neutral-200 px-3 py-2 text-neutral-900 last:border-b-0 ${
-        isHighlighted ? "bg-sky-100" : "bg-white"
+      className={`cursor-pointer border-b border-border px-3 py-2 text-foreground last:border-b-0 ${
+        isHighlighted ? "bg-accent/20" : "bg-transparent"
       }`}
     >
       {suggestion.name} ({suggestion.position})
@@ -84,29 +87,30 @@ export default function PlayerSearch({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-[2px]"
       role="presentation"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg rounded-lg bg-white shadow-xl"
+        className="relative w-full max-w-lg overflow-visible rounded-xl border border-border bg-background shadow-2xl shadow-black/50"
         role="dialog"
         aria-modal="true"
         aria-labelledby="player-search-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between border-b border-neutral-200 px-4 py-3">
+        <div className="flex items-start justify-between overflow-hidden rounded-t-xl border-b border-border bg-elevated px-4 py-3">
           <div className="text-center sm:text-left">
-            <h2 id="player-search-title" className="text-xl font-bold text-neutral-900">
+            <h2 id="player-search-title" className="text-xl font-bold text-foreground">
               Search Player
             </h2>
-            <p className="mt-1 text-sm font-medium text-red-600">
-              Eligibility follows your backend seed (e.g. nflverse season range).
+            <p className="mt-1 text-sm text-foreground-muted">
+              {eligibilityLine ??
+                "Eligibility follows your backend nflverse roster data (edit config/game.json on the server)."}
             </p>
           </div>
           <button
             type="button"
-            className="rounded p-1 text-2xl leading-none text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+            className="rounded-lg p-1.5 text-2xl leading-none text-foreground-muted transition hover:bg-background hover:text-foreground"
             onClick={onClose}
             aria-label="Close"
           >
@@ -114,8 +118,8 @@ export default function PlayerSearch({
           </button>
         </div>
 
-        <div className="px-4 py-4">
-          <div className="autosuggest-container relative w-full">
+        <div className="relative z-10 px-4 py-4">
+          <div className="autosuggest-container relative z-10 w-full">
             <Autosuggest<PlayerSuggestion>
               suggestions={suggestions}
               onSuggestionsFetchRequested={onSuggestionsFetchRequested}
@@ -131,18 +135,18 @@ export default function PlayerSearch({
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-neutral-200 bg-neutral-900 px-4 py-3">
+        <div className="relative z-0 flex justify-end gap-2 overflow-hidden rounded-b-xl border-t border-border bg-elevated px-4 py-3">
           <button
             type="button"
-            className="rounded px-4 py-2 text-white hover:text-red-400"
+            className="rounded-lg px-4 py-2 font-medium text-foreground-muted transition hover:bg-background hover:text-foreground"
             onClick={onClose}
           >
             Close
           </button>
           <button
             type="button"
-            className="rounded bg-white px-4 py-2 text-neutral-900 hover:text-green-600"
-            onClick={handleSubmit}
+            className="rounded-lg bg-accent px-4 py-2 font-semibold text-background shadow-sm transition hover:bg-accent-muted"
+            onClick={() => void handleSubmit()}
           >
             Search
           </button>

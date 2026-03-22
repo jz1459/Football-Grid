@@ -4,18 +4,20 @@ RUN apk add --no-cache openssl libc6-compat
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-COPY prisma ./prisma
+# Build context is repo root (see docker-compose): copy backend app + shared `config/game.json`.
+COPY backend/package.json backend/package-lock.json* ./
+COPY backend/prisma ./prisma
 
 RUN npm install
 
-COPY tsconfig.json ./
-COPY src ./src
-COPY data ./data
+COPY backend/tsconfig.json ./
+COPY backend/src ./src
+COPY backend/data ./data
+COPY config ./config
 
 RUN npm run db:generate && npm run build
 
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY backend/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 EXPOSE 5001

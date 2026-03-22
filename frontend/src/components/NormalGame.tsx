@@ -1,18 +1,41 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import axios from "axios";
 import type { SuggestionsFetchRequestedParams } from "react-autosuggest";
 import NormalBoard from "./NormalBoard";
 import PlayerSearch from "./PlayerSearch";
 import TriviaCategories from "./TriviaCategories";
-import { calculateWinner } from "@/lib/normalWinner";
+import { calculateWinner, getWinningLine } from "@/lib/normalWinner";
 import { getApiBase } from "@/lib/api";
 import type { PlayerSuggestion } from "@/types/player";
 
 export type GridSize = 3 | 4 | 5;
 
 const GRID_OPTIONS: GridSize[] = [3, 4, 5];
+
+type Banner = { type: "error" | "info"; message: string };
+
+/**
+ * Headers + board form a `(gridSize+1)×(gridSize+1)` cell block (corner implied by padding).
+ * Sizes cells from the smaller of width/height budget so the grid fits the viewport.
+ */
+function computeCellSize(gridSize: number, vw: number, vh: number): number {
+  const padX = 64;
+  const chromeY = vw < 480 ? 200 : 240;
+  const usableW = Math.max(168, vw - padX);
+  const usableH = Math.max(168, vh - chromeY);
+  const span = gridSize + 1;
+  const fromW = Math.floor(usableW / span);
+  const fromH = Math.floor(usableH / span);
+  const raw = Math.min(fromW, fromH);
+  const minPx = 44;
+  let maxPx = 120;
+  if (vw >= 1536) maxPx = 160;
+  else if (vw >= 1024) maxPx = 150;
+  else if (vw >= 640) maxPx = 136;
+  return Math.max(minPx, Math.min(maxPx, raw));
+}
 
 /**
  * Main game: NFL teams label row/column headers (`POST /boards/random` ensures every square has a valid
@@ -21,16 +44,30 @@ const GRID_OPTIONS: GridSize[] = [3, 4, 5];
 export default function NormalGame() {
   const [gridSize, setGridSize] = useState<GridSize>(3);
   const [boardLoading, setBoardLoading] = useState(false);
+  /** Phone-sized default avoids SSR/hydration mismatch and oversized cells before measure. */
+  const [viewport, setViewport] = useState({ w: 390, h: 844 });
+
+  useLayoutEffect(() => {
+    const measure = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
+    };
+  }, []);
 
   const cellSize = useMemo(
-    () => Math.max(44, Math.min(120, Math.floor(360 / gridSize))),
-    [gridSize],
+    () => computeCellSize(gridSize, viewport.w, viewport.h),
+    [gridSize, viewport.w, viewport.h],
   );
 
   const [board, setBoard] = useState<(string | null)[]>(() => Array(9).fill(null));
   const [xIsNext, setXIsNext] = useState(true);
   const [newGame, setNewGame] = useState(false);
   const winner = calculateWinner(board, gridSize);
+  const winningLine = useMemo(() => getWinningLine(board, gridSize), [board, gridSize]);
   const boardFull = board.length > 0 && board.every((c) => c !== null);
   const isDraw = boardFull && !winner;
 
@@ -38,9 +75,16 @@ export default function NormalGame() {
   const [modalData, setModalData] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [suggestions, setSuggestions] = useState<PlayerSuggestion[]>([]);
+  const [banner, setBanner] = useState<Banner | null>(null);
 
   const [triviaRow, setTriviaRow] = useState<(string | null)[]>(() => Array(3).fill(null));
   const [triviaColumn, setTriviaColumn] = useState<(string | null)[]>(() => Array(3).fill(null));
+
+  useEffect(() => {
+    if (!banner) return;
+    const t = window.setTimeout(() => setBanner(null), 5000);
+    return () => window.clearTimeout(t);
+  }, [banner]);
 
   /** Changing dimensions clears the board and headers until the user starts again. */
   useEffect(() => {
@@ -55,6 +99,32 @@ export default function NormalGame() {
   }, [gridSize]);
 
   const api = getApiBase();
+
+  const [eligibilityLine, setEligibilityLine] = useState<string | null>(null);
+
+  useEffect(() => {
+    void axios
+      .get<{
+        rosterSeasonRange?: { start: number; end: number };
+        rosterSeasonYears?: number[] | null;
+      }>(`${api}/config`)
+      .then(({ data }) => {
+        const years = data.rosterSeasonYears?.filter((y) => typeof y === "number") ?? [];
+        if (years.length > 0) {
+          const sorted = [...new Set(years)].sort((a, b) => a - b);
+          const span = `${sorted[0]}–${sorted[sorted.length - 1]}`;
+          const detail =
+            sorted.length <= 6 ? sorted.join(", ") : `${span} (${sorted.length} seasons)`;
+          setEligibilityLine(`Eligibility follows nflverse roster seasons: ${detail}.`);
+          return;
+        }
+        const r = data.rosterSeasonRange;
+        if (r && typeof r.start === "number" && typeof r.end === "number") {
+          setEligibilityLine(`Eligibility follows nflverse roster seasons ${r.start}–${r.end}.`);
+        }
+      })
+      .catch(() => setEligibilityLine(null));
+  }, [api]);
 
   /** Calls `POST /search_players` and returns suggestion objects for Autosuggest (empty on error). */
   const getSuggestions = useCallback(
@@ -98,17 +168,17 @@ export default function NormalGame() {
 
   /**
    * Validates the typed player via `POST /get_player`; if their team list includes both header teams for
-   * this square, records `X` or `O` and advances turn. Parses `Name (Position)` so the API can distinguish homonyms.
+   * this square, records `X` or `O` and advances turn. Returns true when the move was recorded.
    */
-  const checkPlayer = async (i: number) => {
+  const checkPlayer = async (i: number): Promise<boolean> => {
     const boardCopy = [...board];
-    if (winner || isDraw || boardCopy[i]) return;
+    if (winner || isDraw || boardCopy[i]) return false;
 
     const n = gridSize;
     const row = Math.floor(i / n);
     const col = i - n * row;
 
-    if (userInput.length === 0) return;
+    if (userInput.length === 0) return false;
 
     try {
       const trimmed = userInput.trim();
@@ -134,14 +204,22 @@ export default function NormalGame() {
         setBoard(boardCopy);
         setXIsNext(!xIsNext);
         setUserInput("");
-      } else {
-        window.alert("Incorrect Answer!");
-        setUserInput("");
+        return true;
       }
+      setBanner({
+        type: "error",
+        message: "Incorrect answer — that player did not play for both teams.",
+      });
+      setUserInput("");
+      return false;
     } catch (e) {
       console.error("Error validating player:", e);
-      window.alert("Player not found or error fetching player data.");
+      setBanner({
+        type: "error",
+        message: "Player not found or error fetching player data.",
+      });
       setUserInput("");
+      return false;
     }
   };
 
@@ -164,7 +242,7 @@ export default function NormalGame() {
         axios.isAxiosError(e) && e.response?.data && typeof (e.response.data as { error?: string }).error === "string"
           ? (e.response.data as { error: string }).error
           : "Could not start game — is the API running and roster data loaded?";
-      window.alert(msg);
+      setBanner({ type: "error", message: msg });
     } finally {
       setBoardLoading(false);
     }
@@ -178,20 +256,35 @@ export default function NormalGame() {
 
   return (
     <section id="game" className="game w-full">
-      <div className="container mx-auto flex max-w-6xl flex-col items-center px-4">
-        <div className="title mb-4 w-full pl-4 text-center min-[481px]:pl-[70px]">
-          <h1 className="text-lg font-bold min-[481px]:text-2xl">Football Tic Tac Toe</h1>
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-sm text-white/90">
-            <span className="font-medium">Grid size</span>
+      <div className="container mx-auto flex w-full max-w-[min(100%,88rem)] flex-col items-center px-4">
+        {banner && (
+          <div
+            role="alert"
+            className={`fixed left-1/2 top-4 z-[100] max-w-[min(100vw-2rem,28rem)] -translate-x-1/2 rounded-lg border px-4 py-3 text-center text-sm font-medium shadow-lg shadow-black/30 ${
+              banner.type === "error"
+                ? "border-danger/40 bg-danger-surface text-danger"
+                : "border-info/40 bg-info-surface text-info"
+            }`}
+          >
+            {banner.message}
+          </div>
+        )}
+
+        <div className="title mb-6 w-full text-center">
+          <h1 className="text-xl font-bold tracking-tight text-foreground min-[481px]:text-3xl">
+            Football Tic Tac Toe
+          </h1>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-sm text-foreground-muted">
+            <span className="font-medium text-foreground">Grid size</span>
             <div className="flex flex-wrap justify-center gap-2">
               {GRID_OPTIONS.map((n) => (
                 <button
                   key={n}
                   type="button"
-                  className={`rounded border px-3 py-1 font-semibold transition-colors ${
+                  className={`rounded-lg border px-3 py-1.5 font-semibold transition-colors ${
                     gridSize === n
-                      ? "border-cyan-400 bg-cyan-400/20 text-cyan-300"
-                      : "border-white/40 text-white hover:border-white"
+                      ? "border-accent bg-accent/15 text-accent"
+                      : "border-border text-foreground-muted hover:border-foreground-muted hover:text-foreground"
                   }`}
                   onClick={() => setGridSize(n)}
                 >
@@ -202,37 +295,35 @@ export default function NormalGame() {
           </div>
         </div>
 
-        <div className="game-content flex flex-row flex-wrap items-start justify-center gap-2 min-[481px]:flex-nowrap">
-          <div
-            className="trivia-col-container mr-0 flex flex-col min-[481px]:-mr-2"
-            style={{ paddingTop: cellSize }}
-          >
-            <TriviaCategories arr={triviaColumn} direction="col" cellSize={cellSize} />
-          </div>
-
-          <div className="flex flex-col items-center">
-            <div className="trivia-row-container mb-0 flex justify-center">
-              <TriviaCategories arr={triviaRow} direction="row" cellSize={cellSize} />
+        <div className="flex w-full max-w-full justify-center overflow-x-auto overflow-y-visible overscroll-x-contain pb-1">
+          <div className="inline-flex shrink-0 flex-nowrap items-start gap-0">
+            <div className="flex flex-col" style={{ paddingTop: cellSize }}>
+              <TriviaCategories arr={triviaColumn} direction="col" cellSize={cellSize} gridSize={gridSize} />
             </div>
-            <div className="board -ml-px">
-              <NormalBoard
-                squares={board}
-                size={gridSize}
-                cellSize={cellSize}
-                onSquareClick={openModal}
-              />
+
+            <div className="flex flex-col items-center">
+              <div className="flex justify-center">
+                <TriviaCategories arr={triviaRow} direction="row" cellSize={cellSize} gridSize={gridSize} />
+              </div>
+              <div className="-ml-px">
+                <NormalBoard
+                  squares={board}
+                  size={gridSize}
+                  cellSize={cellSize}
+                  winningLine={winner ? winningLine : null}
+                  onSquareClick={openModal}
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="message mt-6 text-center">
-          <p className="mb-4 text-lg font-bold text-cyan-400 min-[481px]:ml-[150px] min-[481px]:text-2xl">
-            {statusMessage}
-          </p>
+        <div className="message mt-8 w-full text-center">
+          <p className="mb-4 text-lg font-bold text-accent min-[481px]:text-2xl">{statusMessage}</p>
           <button
             type="button"
             disabled={boardLoading}
-            className="start-game relative ml-0 overflow-hidden border border-white bg-transparent px-8 py-4 text-xl font-bold text-white transition-colors duration-300 before:absolute before:left-0 before:top-0 before:-z-10 before:h-full before:w-0 before:bg-white before:transition-all before:duration-300 before:content-[''] hover:text-neutral-900 hover:before:w-full enabled:min-[481px]:ml-[150px] disabled:opacity-50"
+            className="rounded-lg bg-accent px-8 py-3.5 text-lg font-bold text-background shadow-md shadow-black/25 transition hover:bg-accent-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => void startGame()}
           >
             {boardLoading ? "Loading…" : newGame ? "New Game" : "Start Game"}
@@ -251,6 +342,7 @@ export default function NormalGame() {
             onSuggestionsFetchRequested={onSuggestionsFetchRequested}
             onSuggestionsClearRequested={onSuggestionsClearRequested}
             getSuggestionValue={getSuggestionValue}
+            eligibilityLine={eligibilityLine}
           />
         )}
       </div>

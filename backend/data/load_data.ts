@@ -1,14 +1,14 @@
 /**
  * Load Postgres from nflverse season rosters (CSV — same source as R `nflreadr::load_rosters`).
  *
- * Run: npm run db:seed — or repo root `./load_data.sh`
+ * Seasons and team seeding: repo root `config/game.json` (see `GAME_CONFIG_PATH` in `.env.example`).
+ * Run: `npm run db:load_data` from `backend/`.
  */
 import { config } from "dotenv";
 import { resolve } from "path";
 
 import { PrismaClient } from "@prisma/client";
 
-import { seasonRangeInclusive } from "./positions";
 import {
   fetchNflverseRosterRows,
   fetchNflverseTeamAbbrevToDisplayName,
@@ -16,31 +16,18 @@ import {
   resolveTeamDisplayName,
 } from "./nflverse";
 import { persistValidPairsFromDb } from "../src/lib/generateValidPairs";
+import { getGameConfig } from "../src/lib/gameConfig";
+import { rosterSeasonYears, rosterSeasonRangeLabel } from "../src/lib/rosterSeasonConfig";
 
 config({ path: resolve(__dirname, "../.env") });
 
-// --- configure here ---
-const SEED_ALL_NFL_TEAMS = true;
-
-/** nflverse `team` abbreviations (e.g. NYG, BUF) — used when SEED_ALL_NFL_TEAMS is false */
-const TEST_TEAM_ABBREVS: string[] = ["NYG", "BUF"];
-
-const SEASON_YEARS: number[] = [];
-
-const SEASON_RANGE: { start: number; end: number } | null = { start: 2015, end: 2025 };
-
-const PAUSE_MS = 200;
-// --- end config ---
-
-/** Derives the ordered list of NFL seasons to download from `SEASON_YEARS` or `SEASON_RANGE`. */
+/** Seasons: `rosterSeasonYears` in `config/game.json` if set, else inclusive `rosterSeason` range. */
 function resolveSeasons(): number[] {
-  if (SEASON_YEARS.length > 0) {
-    return [...new Set(SEASON_YEARS)].sort((a, b) => a - b);
+  const gc = getGameConfig();
+  if (gc.rosterSeasonYears && gc.rosterSeasonYears.length > 0) {
+    return [...new Set(gc.rosterSeasonYears)].sort((a, b) => a - b);
   }
-  if (SEASON_RANGE != null) {
-    return seasonRangeInclusive(SEASON_RANGE.start, SEASON_RANGE.end);
-  }
-  throw new Error("Set SEASON_YEARS or SEASON_RANGE in data/load_data.ts.");
+  return rosterSeasonYears();
 }
 
 const prisma = new PrismaClient();
@@ -103,7 +90,13 @@ async function upsertPlayerFromNflverse(name: string, pos: string, gsis: string)
  * then `PlayerTeam` upserts for every roster row that passes team/position filters.
  */
 async function main(): Promise<void> {
+  const gc = getGameConfig();
   const seasons = resolveSeasons();
+  const seasonMode =
+    gc.rosterSeasonYears && gc.rosterSeasonYears.length > 0
+      ? "rosterSeasonYears in config/game.json"
+      : `rosterSeason ${rosterSeasonRangeLabel()} (config/game.json)`;
+  console.log(`Seasons: ${seasons.length ? `${seasons[0]}…${seasons[seasons.length - 1]}` : "(none)"} (${seasonMode})`);
   const abbrevToDisplay = await fetchNflverseTeamAbbrevToDisplayName();
 
   let totalRosterRowsApplied = 0;
@@ -112,12 +105,12 @@ async function main(): Promise<void> {
     console.log(`--- Season ${season} (nflverse load_rosters CSV) ---`);
     const rows = await fetchNflverseRosterRows(season);
 
-    const testSet = new Set(TEST_TEAM_ABBREVS);
+    const testSet = new Set(gc.seed.testTeamAbbrevs);
     let seasonRowsApplied = 0;
 
     for (const row of rows) {
       const abbr = row.team.trim().toUpperCase();
-      if (!SEED_ALL_NFL_TEAMS && !testSet.has(abbr)) continue;
+      if (!gc.seed.seedAllNflTeams && !testSet.has(abbr)) continue;
 
       const teamName = resolveTeamDisplayName(row.team, abbrevToDisplay);
       if (!teamName) {
@@ -158,7 +151,7 @@ async function main(): Promise<void> {
     }
 
     console.log(`  Season ${season}: ${seasonRowsApplied} roster rows applied (after filters)`);
-    await sleep(PAUSE_MS);
+    await sleep(gc.loadDataPauseMs);
   }
 
   console.log(
