@@ -1,70 +1,55 @@
-# Getting Started with Create React App
+# Football Grid — Next.js (TypeScript + Tailwind)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Football Grid UI: same game flow and API calls as the original prototype, built with the App Router and Tailwind CSS.
 
-## Available Scripts
+## Setup
 
-In the project directory, you can run:
+```bash
+npm install
+cp .env.example .env.local   # optional — set NEXT_PUBLIC_API_URL if the API is not on localhost:5001
+```
 
-### `npm start`
+Start the API from `backend` (`npm run dev`, default port **5001**), then:
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```bash
+npm run dev
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Open [http://localhost:3000](http://localhost:3000).
 
-### `npm test`
+## Code map (reading order)
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+1. **`src/app/layout.tsx`** / **`src/app/page.tsx`** / **`src/app/globals.css`** — App Router shell, metadata, global styles (incl. autosuggest dropdown CSS).
+2. **`src/components/NormalGame.tsx`** — Game state, selectable **3×3 / 4×4 / 5×5** grid, API calls, trivia randomization (`2n` teams for `n×n`), win/draw detection via `calculateWinner(board, n)`.
+3. **`src/components/NormalBoard.tsx`** / **`Square.tsx`** / **`TriviaCategories.tsx`** — Presentational grid pieces.
+4. **`src/components/PlayerSearch.tsx`** — Modal + `react-autosuggest` wired to parent callbacks.
+5. **`src/lib/api.ts`**, **`normalWinner.ts`** (generic `n×n` lines), **`teams.ts`** — Small pure helpers / constants.
+6. **`src/types/player.ts`** — Shared suggestion shape.
 
-### `npm run build`
+Each exported function and major component has a `/** … */` JSDoc block in source.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## API
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+The browser calls `NEXT_PUBLIC_API_URL` (default `http://localhost:5001`) for:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- `POST /search_players` — autocomplete
+- `POST /get_player` — validate pick against row/column teams
 
-### `npm run eject`
+For Docker or another host, set `NEXT_PUBLIC_API_URL` to the reachable base URL (no trailing slash).
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Scripts
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+| Command        | Description        |
+| -------------- | ------------------ |
+| `npm run dev`  | Next dev server    |
+| `npm run build` | Production build  |
+| `npm run start` | Run production   |
+| `npm run lint` | `tsc --noEmit` (typecheck) |
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Layout note
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+`PlayerSearch` uses `react-autosuggest` (client-only). Game shell is in `src/components/NormalGame.tsx`; shared helpers live under `src/lib/`.
 
-## Learn More
+## Docker
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+From the repo root, `docker compose up --build` builds this app with `NEXT_PUBLIC_API_URL=http://localhost:5001` (correct when the browser and API are both on your machine). To change it, pass a build arg on the `frontend` service (see root `docker-compose.yml`).

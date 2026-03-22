@@ -1,7 +1,7 @@
 /**
- * Seed Postgres from nflverse season rosters (CSV — same source as R `nflreadr::load_rosters`).
+ * Load Postgres from nflverse season rosters (CSV — same source as R `nflreadr::load_rosters`).
  *
- * Run: npm run db:seed
+ * Run: npm run db:seed — or repo root `./load_data.sh`
  */
 import { config } from "dotenv";
 import { resolve } from "path";
@@ -39,7 +39,7 @@ function resolveSeasons(): number[] {
   if (SEASON_RANGE != null) {
     return seasonRangeInclusive(SEASON_RANGE.start, SEASON_RANGE.end);
   }
-  throw new Error("Set SEASON_YEARS or SEASON_RANGE for nflverse seed.");
+  throw new Error("Set SEASON_YEARS or SEASON_RANGE in data/load_data.ts.");
 }
 
 const prisma = new PrismaClient();

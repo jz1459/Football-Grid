@@ -1,17 +1,22 @@
-FROM python:3.11-slim
+FROM node:20-alpine
+
+RUN apk add --no-cache openssl libc6-compat
 
 WORKDIR /app
 
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma
 
-# App code
-COPY . .
+RUN npm install
 
-ENV FLASK_APP=app.py
+COPY tsconfig.json ./
+COPY src ./src
 
-EXPOSE 5000
+RUN npm run db:generate && npm run build
 
-# Create tables then start Flask (inline to avoid entrypoint script line-ending issues)
-CMD ["sh", "-c", "python -c \"from app import app, db; app.app_context().push(); db.create_all()\" && exec flask run --host=0.0.0.0 --port=5000"]
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+EXPOSE 5001
+
+ENTRYPOINT ["/docker-entrypoint.sh"]

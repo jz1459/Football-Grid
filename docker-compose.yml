@@ -1,17 +1,27 @@
+# Full stack: PostgreSQL + Express/TypeScript API (`backend`) + Next.js UI (`frontend`).
+#
+#   ./start.sh
+#   # or: docker compose up -d --build
+#
+# Then load roster data (see `backend/README.md` → Docker).
+#
+# The UI is built with NEXT_PUBLIC_API_URL=http://localhost:5001 so the browser
+# (on your machine) talks to the published API port. If you open the app via a
+# non-localhost host, rebuild with a matching build arg (see frontend service).
+
 services:
-  db:
-    image: mysql:8.0
+  postgres:
+    image: postgres:16-alpine
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: football_grid
-      MYSQL_USER: app
-      MYSQL_PASSWORD: apppass
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: apppass
+      POSTGRES_DB: football_grid
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpass"]
+      test: ["CMD-SHELL", "pg_isready -U app -d football_grid"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -22,25 +32,25 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      MYSQL_USER: app
-      MYSQL_PASSWORD: apppass
-      MYSQL_HOST: db
-      MYSQL_DB: football_grid
-      MYSQL_PORT: 3306
+      DATABASE_URL: postgresql://app:apppass@postgres:5432/football_grid
+      PORT: "5001"
     ports:
-      - "5001:5000"
+      - "5001:5001"
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Baked at Next build time — must be reachable from the user’s browser
+        NEXT_PUBLIC_API_URL: http://localhost:5001
     ports:
       - "3000:3000"
     depends_on:
       - backend
 
 volumes:
-  mysql_data:
+  postgres_data:

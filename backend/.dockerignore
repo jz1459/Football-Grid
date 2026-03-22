@@ -1,8 +1,5 @@
-venv
+node_modules
+dist
 .env
-.env.*
-__pycache__
-*.pyc
-.pytest_cache
+*.log
 .git
-.gitignore

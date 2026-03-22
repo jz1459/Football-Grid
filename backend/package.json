@@ -10,7 +10,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:seed": "ts-node --project tsconfig.data.json data/seed-from-nflverse.ts"
+    "db:load_data": "ts-node --project tsconfig.data.json data/load_data.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

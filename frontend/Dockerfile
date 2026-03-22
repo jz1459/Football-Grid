@@ -1,20 +1,40 @@
-FROM node:20-alpine
+# Production image — standalone Next.js (see next.config.ts output: "standalone").
+FROM node:20-alpine AS base
 
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci
 
-# Install dependencies
-COPY package*.json ./
-RUN npm install
-
-# App code (so dev server can serve it)
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+ARG NEXT_PUBLIC_API_URL=http://localhost:5001
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN npm run build
+
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
 EXPOSE 3000
-
-# Listen on all interfaces so host can reach it; disable opening browser in container
-ENV HOST=0.0.0.0
 ENV PORT=3000
-ENV BROWSER=none
-ENV CI=true
+ENV HOSTNAME=0.0.0.0
 
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
