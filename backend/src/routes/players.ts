@@ -122,10 +122,52 @@ export async function validateHandler(req: Request, res: Response): Promise<void
   res.json([...teamSet].sort());
 }
 
+interface ResolvePairBody {
+  teamA?: string;
+  teamB?: string;
+}
+
+/**
+ * POST body: `{ teamA, teamB }` (display names, order irrelevant). Returns one `{ name, position }` row
+ * whose roster includes both teams — stable choice (lowest `id`) for bot moves.
+ */
+export async function resolvePairHandler(req: Request, res: Response): Promise<void> {
+  const body = req.body as ResolvePairBody;
+  const teamA = body.teamA?.trim();
+  const teamB = body.teamB?.trim();
+
+  if (!teamA || !teamB) {
+    res.status(400).json({ error: "teamA and teamB are required" });
+    return;
+  }
+
+  const players = await prisma.player.findMany({
+    where: {
+      AND: [
+        { playerTeams: { some: { team: { name: teamA } } } },
+        { playerTeams: { some: { team: { name: teamB } } } },
+      ],
+    },
+    select: { id: true, name: true, position: true },
+    orderBy: { id: "asc" },
+    take: 1,
+  });
+
+  if (players.length === 0) {
+    res.status(404).json({ error: "No player found for this team pair" });
+    return;
+  }
+
+  const p = players[0]!;
+  res.json({ name: p.name, position: p.position });
+}
+
 /** Same behavior as `POST /search_players`. */
 router.post("/search", searchHandler);
 
 /** Same behavior as `POST /get_player`. */
 router.post("/validate", validateHandler);
+
+router.post("/resolve_pair", resolvePairHandler);
 
 export const playersRouter = router;

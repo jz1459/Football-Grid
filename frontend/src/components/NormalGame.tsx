@@ -1,18 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import type { SuggestionsFetchRequestedParams } from "react-autosuggest";
 import NormalBoard from "./NormalBoard";
+import NewGameModal, { type NewGameDraft, type GridSize } from "./NewGameModal";
 import PlayerSearch from "./PlayerSearch";
 import TriviaCategories from "./TriviaCategories";
 import { calculateWinner, getWinningLine } from "@/lib/normalWinner";
+import { chooseBotMove } from "@/lib/botMinimax";
 import { getApiBase } from "@/lib/api";
 import type { PlayerSuggestion } from "@/types/player";
 
-export type GridSize = 3 | 4 | 5;
-
-const GRID_OPTIONS: GridSize[] = [3, 4, 5];
+export type { GridSize };
 
 type Banner = { type: "error" | "info"; message: string };
 
@@ -79,6 +79,28 @@ export default function NormalGame() {
 
   const [triviaRow, setTriviaRow] = useState<(string | null)[]>(() => Array(3).fill(null));
   const [triviaColumn, setTriviaColumn] = useState<(string | null)[]>(() => Array(3).fill(null));
+
+  /** Vs computer: you may go first (X) or second (O); X always opens the game. */
+  const [vsComputer, setVsComputer] = useState(false);
+  const [userPlaysFirst, setUserPlaysFirst] = useState(true);
+  const [botThinking, setBotThinking] = useState(false);
+
+  const [newGameModalOpen, setNewGameModalOpen] = useState(false);
+  const [newGameDraft, setNewGameDraft] = useState<NewGameDraft>({
+    gridSize: 3,
+    vsComputer: false,
+    userPlaysFirst: true,
+  });
+
+  const humanMark = userPlaysFirst ? "X" : "O";
+  const botMark = userPlaysFirst ? "O" : "X";
+  /** Whether the human may move (vs computer) or whose turn in hot-seat. */
+  const isHumanTurn = vsComputer ? (userPlaysFirst ? xIsNext : !xIsNext) : true;
+  const isBotTurn = vsComputer && (userPlaysFirst ? !xIsNext : xIsNext);
+
+  /** Latest board for the bot effect — avoids depending on `board` so a failed bot move does not re-trigger the effect in a loop. */
+  const boardRef = useRef(board);
+  boardRef.current = board;
 
   useEffect(() => {
     if (!banner) return;
@@ -160,6 +182,7 @@ export default function NormalGame() {
 
   /** Opens the player-search modal for square `i` if the game is active and there is no winner yet. */
   const openModal = (i: number) => {
+    if (vsComputer && (!isHumanTurn || botThinking)) return;
     if (!winner && !isDraw && newGame) {
       setModalData(i);
       setShowModal(true);
@@ -173,6 +196,7 @@ export default function NormalGame() {
   const checkPlayer = async (i: number): Promise<boolean> => {
     const boardCopy = [...board];
     if (winner || isDraw || boardCopy[i]) return false;
+    if (vsComputer && !isHumanTurn) return false;
 
     const n = gridSize;
     const row = Math.floor(i / n);
@@ -223,19 +247,27 @@ export default function NormalGame() {
     }
   };
 
-  /** Resets the board, marks the session as started, X moves first, and loads solvable headers from the API. */
-  const startGame = async () => {
+  /** Applies modal choices, then loads a random solvable board from the API. Returns whether the fetch succeeded. */
+  const startGameFromOptions = async (opts: NewGameDraft): Promise<boolean> => {
+    setVsComputer(opts.vsComputer);
+    setUserPlaysFirst(opts.userPlaysFirst);
+    const size = opts.gridSize;
+    if (size !== gridSize) {
+      setGridSize(size);
+    }
+
     setBoardLoading(true);
     try {
       const { data } = await axios.post<{ triviaRow: string[]; triviaColumn: string[] }>(
         `${api}/boards/random`,
-        { gridSize },
+        { gridSize: size },
       );
       setTriviaRow(data.triviaRow);
       setTriviaColumn(data.triviaColumn);
-      setBoard(Array(gridSize * gridSize).fill(null));
+      setBoard(Array(size * size).fill(null));
       setNewGame(true);
       setXIsNext(true);
+      return true;
     } catch (e) {
       console.error("Error fetching board:", e);
       const msg =
@@ -243,16 +275,95 @@ export default function NormalGame() {
           ? (e.response.data as { error: string }).error
           : "Could not start game — is the API running and roster data loaded?";
       setBanner({ type: "error", message: msg });
+      return false;
     } finally {
       setBoardLoading(false);
     }
   };
 
-  const statusMessage = winner
-    ? `Winner: ${winner}`
-    : isDraw
-      ? "Draw"
-      : `Next Player: ${xIsNext ? "X" : "O"}`;
+  const openNewGameModal = () => {
+    setNewGameDraft({ gridSize, vsComputer, userPlaysFirst });
+    setNewGameModalOpen(true);
+  };
+
+  const handleConfirmNewGame = async () => {
+    const ok = await startGameFromOptions(newGameDraft);
+    if (ok) setNewGameModalOpen(false);
+  };
+
+  /** Bot turn: minimax + alpha-beta and `resolve_pair`. */
+  useEffect(() => {
+    if (!vsComputer || !newGame || winner || isDraw || !isBotTurn) return;
+
+    let cancelled = false;
+    void (async () => {
+      setBotThinking(true);
+      try {
+        const move = chooseBotMove(boardRef.current, gridSize, botMark, humanMark);
+        const row = Math.floor(move / gridSize);
+        const col = move - gridSize * row;
+        const topHeaderTeam = triviaRow[col];
+        const leftHeaderTeam = triviaColumn[row];
+
+        if (!topHeaderTeam || !leftHeaderTeam || move < 0) {
+          if (!cancelled) {
+            setBanner({ type: "error", message: "Bot could not pick a square." });
+          }
+          return;
+        }
+
+        const { data } = await axios.post<{ name: string; position: string }>(`${api}/resolve_pair`, {
+          teamA: topHeaderTeam,
+          teamB: leftHeaderTeam,
+        });
+        if (cancelled) return;
+
+        await axios.post<string[]>(`${api}/get_player`, {
+          playerName: data.name,
+          position: data.position,
+        });
+        if (cancelled) return;
+
+        setBoard((prev) => {
+          if (prev[move] !== null) return prev;
+          const next = [...prev];
+          next[move] = botMark;
+          return next;
+        });
+        setXIsNext((prev) => !prev);
+      } catch (e) {
+        console.error("Bot move failed:", e);
+        if (!cancelled) {
+          setBanner({
+            type: "error",
+            message: "Bot could not complete a move — check the API and roster data.",
+          });
+        }
+      } finally {
+        if (!cancelled) setBotThinking(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [vsComputer, newGame, winner, isDraw, isBotTurn, gridSize, botMark, humanMark, triviaRow, triviaColumn, api]);
+
+  const statusMessage = !newGame
+    ? boardLoading
+      ? "Loading…"
+      : ""
+    : winner
+      ? `Winner: ${winner}`
+      : isDraw
+        ? "Draw"
+        : vsComputer
+          ? isHumanTurn
+            ? `Your Turn (${humanMark})`
+            : botThinking
+              ? "Computer thinking…"
+              : `Computer's Turn (${botMark})`
+          : `Next Player: ${xIsNext ? "X" : "O"}`;
 
   return (
     <section id="game" className="game w-full">
@@ -274,25 +385,6 @@ export default function NormalGame() {
           <h1 className="text-xl font-bold tracking-tight text-foreground min-[481px]:text-3xl">
             Football Tic Tac Toe
           </h1>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-sm text-foreground-muted">
-            <span className="font-medium text-foreground">Grid size</span>
-            <div className="flex flex-wrap justify-center gap-2">
-              {GRID_OPTIONS.map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className={`rounded-lg border px-3 py-1.5 font-semibold transition-colors ${
-                    gridSize === n
-                      ? "border-accent bg-accent/15 text-accent"
-                      : "border-border text-foreground-muted hover:border-foreground-muted hover:text-foreground"
-                  }`}
-                  onClick={() => setGridSize(n)}
-                >
-                  {n}×{n}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         <div className="flex w-full max-w-full justify-center overflow-x-auto overflow-y-visible overscroll-x-contain pb-1">
@@ -319,16 +411,27 @@ export default function NormalGame() {
         </div>
 
         <div className="message mt-8 w-full text-center">
-          <p className="mb-4 text-lg font-bold text-accent min-[481px]:text-2xl">{statusMessage}</p>
+          {statusMessage ? (
+            <p className="mb-4 text-lg font-bold text-accent min-[481px]:text-2xl">{statusMessage}</p>
+          ) : null}
           <button
             type="button"
             disabled={boardLoading}
             className="rounded-lg bg-accent px-8 py-3.5 text-lg font-bold text-background shadow-md shadow-black/25 transition hover:bg-accent-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={() => void startGame()}
+            onClick={openNewGameModal}
           >
-            {boardLoading ? "Loading…" : newGame ? "New Game" : "Start Game"}
+            New Game
           </button>
         </div>
+
+        <NewGameModal
+          open={newGameModalOpen}
+          onClose={() => setNewGameModalOpen(false)}
+          draft={newGameDraft}
+          onDraftChange={setNewGameDraft}
+          onConfirm={handleConfirmNewGame}
+          loading={boardLoading}
+        />
 
         {showModal && (
           <PlayerSearch

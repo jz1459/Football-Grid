@@ -2,7 +2,7 @@
  * Builds every winning line for an `n×n` tic-tac-toe board: `n` rows, `n` columns, 2 diagonals.
  * Each line lists flat indices `0 .. n*n-1`.
  */
-function winningLinesForSize(n: number): number[][] {
+export function winningLinesForSize(n: number): number[][] {
   if (n < 2) return [];
 
   const lines: number[][] = [];

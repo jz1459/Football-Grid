@@ -5,7 +5,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { playersRouter, searchHandler, validateHandler } from "./routes/players";
+import { playersRouter, searchHandler, validateHandler, resolvePairHandler } from "./routes/players";
 import { boardsRouter } from "./routes/boards";
 import { getGameConfig } from "./lib/gameConfig";
 import { getRosterSeasonRange } from "./lib/rosterSeasonConfig";
@@ -54,6 +54,9 @@ app.post("/search_players", searchHandler);
 
 /** Resolve a chosen player to sorted list of team display names they are linked to. */
 app.post("/get_player", validateHandler);
+
+/** One roster row `{ name, position }` that played for both teams (bot / hints). */
+app.post("/resolve_pair", resolvePairHandler);
 
 /** Random row/column headers such that every square has ≥1 player with both teams in the DB. */
 app.use("/boards", boardsRouter);
