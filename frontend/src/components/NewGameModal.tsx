@@ -6,12 +6,14 @@ export type GridSize = 3 | 4 | 5;
 
 const GRID_OPTIONS: GridSize[] = [3, 4, 5];
 
+/** Interface for the new game draft. */
 export type NewGameDraft = {
   gridSize: GridSize;
   vsComputer: boolean;
   userPlaysFirst: boolean;
 };
 
+/** Interface for the props of the new game modal. */
 type NewGameModalProps = {
   open: boolean;
   onClose: () => void;
@@ -34,6 +36,7 @@ export default function NewGameModal({
 }: NewGameModalProps) {
   useEffect(() => {
     if (!open) return;
+    // Add an event listener for the escape key to close the modal
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };

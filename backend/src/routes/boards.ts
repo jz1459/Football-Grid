@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../db";
 import { NFL_TEAMS } from "../lib/nflTeams";
-import { getValidPairSet, refreshValidPairsFromDatabase, sampleValidBoard } from "../lib/generateValidBoard";
+import { createBoard, getValidPairSet, refreshValidPairsFromDatabase } from "../lib/generateBoard";
 
 const router = Router();
 
@@ -11,8 +11,7 @@ function isGridSize(n: unknown): n is 3 | 4 | 5 {
 
 /**
  * POST body `{ gridSize?: 3|4|5 }`. Returns `{ triviaRow, triviaColumn }` where every cell has at least
- * one rostered player linked to both header teams (same semantics as the game UI). Pair set from
- * `data/valid-pairs.json` (committed; refreshed by `db:load_data` or `POST /boards/refresh-pairs`).
+ * one rostered player linked to both header teams (same semantics as the game UI). .
  */
 router.post("/random", async (req: Request, res: Response): Promise<void> => {
   const raw = req.body?.gridSize ?? 3;
@@ -22,6 +21,7 @@ router.post("/random", async (req: Request, res: Response): Promise<void> => {
   }
   const n = raw;
 
+  // Get all the team names from the database
   const dbTeams = await prisma.team.findMany({ select: { name: true } });
   const inDb = new Set(dbTeams.map((t) => t.name));
   const pool = NFL_TEAMS.filter((name) => inDb.has(name));
@@ -34,8 +34,11 @@ router.post("/random", async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
+    // Get the valid team-pair set from the database to use in the board generation
     const validPairs = await getValidPairSet();
-    const board = sampleValidBoard(validPairs, pool, n);
+
+    // Create the board
+    const board = createBoard(validPairs, pool, n);
     if (!board) {
       res.status(503).json({
         error: "Could not generate a fully solvable board after many tries. Try again or reload roster data.",

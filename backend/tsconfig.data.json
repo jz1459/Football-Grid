@@ -10,5 +10,5 @@
     "resolveJsonModule": true,
     "noEmit": true
   },
-  "include": ["data/**/*.ts", "src/lib/generateValidPairs.ts", "src/lib/rosterSeasonConfig.ts", "src/lib/gameConfig.ts"]
+  "include": ["data/**/*.ts", "src/lib/generateValidPairs.ts", "src/lib/gameConfig.ts"]
 }

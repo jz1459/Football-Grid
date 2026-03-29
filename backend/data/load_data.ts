@@ -11,8 +11,7 @@ import { PrismaClient } from "@prisma/client";
 
 import { createTeamNameMap, fetchRoster, getPosition, getTeam } from "./nflverse";
 import { persistValidPairsFromDb } from "../src/lib/generateValidPairs";
-import { getGameConfig } from "../src/lib/gameConfig";
-import { rosterSeasonYears, rosterSeasonRangeLabel } from "../src/lib/rosterSeasonConfig";
+import { getGameConfig, rosterSeasonRangeLabel, rosterSeasonYears } from "../src/lib/gameConfig";
 
 // Load the environment variables from the .env file
 config({ path: resolve(__dirname, "../.env") });

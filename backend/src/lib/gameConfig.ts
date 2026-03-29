@@ -42,6 +42,7 @@ function isNum(n: unknown): n is number {
   return typeof n === "number" && Number.isFinite(n);
 }
 
+/** Parse and validate the game config file. */
 function parseAndValidate(raw: unknown): GameConfigFile {
   if (raw === null || typeof raw !== "object") {
     throw new Error("game.json must be a JSON object");
@@ -123,4 +124,25 @@ export function getGameConfig(): GameConfigFile {
   }
   cache = parseAndValidate(parsed);
   return cache;
+}
+
+/**
+ * Roster season range for API + seeding — from `config/game.json` (`rosterSeason`). For explicit year
+ * lists use `rosterSeasonYears` in that file (see `load_data.ts`).
+ */
+export function getRosterSeasonRange(): { start: number; end: number } {
+  return getGameConfig().rosterSeason;
+}
+
+/** Inclusive NFL season years from the configured range (ignores `rosterSeasonYears` list — use load_data for that). */
+export function rosterSeasonYears(): number[] {
+  const { start, end } = getRosterSeasonRange();
+  const years: number[] = [];
+  for (let y = start; y <= end; y += 1) years.push(y);
+  return years;
+}
+
+export function rosterSeasonRangeLabel(): string {
+  const { start, end } = getRosterSeasonRange();
+  return `${start}–${end}`;
 }

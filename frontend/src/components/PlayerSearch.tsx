@@ -53,7 +53,7 @@ export default function PlayerSearch({
   if (!show) return null;
 
   /** Bridges Autosuggest text changes into controlled `userInput` state in the parent. */
-  const handleSearch = (_event: React.FormEvent<HTMLElement>, { newValue }: ChangeEvent) => {
+  const handleSearch = (_event: React.SyntheticEvent<HTMLElement>, { newValue }: ChangeEvent) => {
     onUserInputChange(newValue);
   };
 

@@ -2,7 +2,7 @@
 
 import Square from "./Square";
 
-type NormalBoardProps = {
+type BoardProps = {
   squares: (string | null)[];
   onSquareClick: (index: number) => void;
   /** Board dimension (3, 4, or 5). */
@@ -14,7 +14,7 @@ type NormalBoardProps = {
 };
 
 /** `size×size` grid of `Square` components; `onSquareClick` receives flat index `0 .. size*size-1`. */
-export default function NormalBoard({ squares, onSquareClick, size, cellSize, winningLine }: NormalBoardProps) {
+export default function Board({ squares, onSquareClick, size, cellSize, winningLine }: BoardProps) {
   const px = size * cellSize;
   const winSet = winningLine && winningLine.length > 0 ? new Set(winningLine) : null;
 

@@ -1,6 +1,6 @@
 type GridSize = 3 | 4 | 5;
 
-type TriviaCategoriesProps = {
+type CategoriesProps = {
   arr: (string | null)[];
   direction: "row" | "col";
   /** Match board cell size so headers align with the grid. */
@@ -9,7 +9,7 @@ type TriviaCategoriesProps = {
 };
 
 /** Renders the team-name headers along the top (`row`) or left side (`col`) of the board. */
-export default function TriviaCategories({ arr, direction, cellSize, gridSize }: TriviaCategoriesProps) {
+export default function Categories({ arr, direction, cellSize, gridSize }: CategoriesProps) {
   const isCol = direction === "col";
   const compact = cellSize < 96;
   const borderClass = compact ? "border-2" : "border-[3px]";

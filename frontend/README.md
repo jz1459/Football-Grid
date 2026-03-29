@@ -36,7 +36,7 @@ For Docker or another host, set `NEXT_PUBLIC_API_URL` to the reachable base URL 
 | `npm run lint`  | `tsc --noEmit` (typecheck) |
 
 
-`PlayerSearch` uses `react-autosuggest` (client-only). Game shell is in `src/components/NormalGame.tsx`; shared helpers live under `src/lib/`.
+`PlayerSearch` uses `react-autosuggest` (client-only). Game shell is in `src/components/Game.tsx`; shared helpers live under `src/lib/`.
 
 
 

@@ -1,4 +1,4 @@
-import { calculateWinner, winningLinesForSize } from "@/lib/normalWinner";
+import { calculateWinner, winningLinesForSize } from "@/lib/winner";
 
 export type Mark = "X" | "O";
 

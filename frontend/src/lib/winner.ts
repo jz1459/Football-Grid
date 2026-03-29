@@ -27,9 +27,15 @@ export function winningLinesForSize(n: number): number[][] {
  */
 export function getWinningLine(squares: (string | null)[], n: number): number[] | null {
   const lines = winningLinesForSize(n);
+
+  // Check if any of the lines are a winning line
   for (const line of lines) {
     const v = squares[line[0]!];
+    // If the line is empty, continue to the next line
+
     if (!v) continue;
+    
+    // If all the squares in the line are the same as the first square, return the line
     if (line.every((idx) => squares[idx] === v)) {
       return line;
     }

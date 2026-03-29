@@ -42,16 +42,23 @@ body {
   align-items: center;
 }
 
-/* react-autosuggest (dropdown positioning) */
-.autosuggest-container .react-autosuggest__suggestions-list {
-  margin: 0;
-  padding: 0;
+/* react-autosuggest: scroll lives on the suggestions *container* div — that is where the
+   library keeps `itemsContainer` ref and sets `scrollTop` for keyboard highlight. */
+.autosuggest-container .react-autosuggest__suggestions-container--open {
   max-height: min(60vh, 420px);
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background-color: var(--bg-elevated);
   border: 1px solid var(--border);
   box-shadow: 0 12px 40px rgb(0 0 0 / 0.35);
   border-radius: 8px;
+}
+
+.autosuggest-container .react-autosuggest__suggestions-list {
+  margin: 0;
+  padding: 0;
 }
 
 .react-autosuggest__suggestions-container {

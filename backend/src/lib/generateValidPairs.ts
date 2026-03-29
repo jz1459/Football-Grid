@@ -2,26 +2,31 @@ import fs from "fs";
 import path from "path";
 import type { PrismaClient } from "@prisma/client";
 
-/** Canonical key for an unordered team-name pair. */
+/** Canonical key for an unordered team-name pair. Puts the smaller team name first to ensure consistent ordering.*/
 export function pairKey(teamA: string, teamB: string): string {
   return teamA.localeCompare(teamB) < 0 ? `${teamA}\0${teamB}` : `${teamB}\0${teamA}`;
 }
 
 /**
- * All unordered team pairs (by display name) such that at least one player is linked to both teams.
+ * All unordered team pairs (by display name) such that at least one player is linked to both teams. Allows for quick lookup of valid pairs to use in the board generation.
  */
 export async function buildValidPairSet(client: PrismaClient): Promise<Set<string>> {
+  // Get all the player team relationships from the database
   const rows = await client.playerTeam.findMany({
     select: { playerId: true, team: { select: { name: true } } },
   });
 
+  // Group the player team relationships by player id
   const byPlayer = new Map<number, string[]>();
+
+  // For each player team relationship, add the team name to the list of team names for that player
   for (const row of rows) {
     const list = byPlayer.get(row.playerId) ?? [];
     list.push(row.team.name);
     byPlayer.set(row.playerId, list);
   }
 
+  // For each player, create all possible unordered team pairs and add them to the set
   const pairs = new Set<string>();
   for (const names of byPlayer.values()) {
     const uniq = [...new Set(names)];
@@ -51,6 +56,7 @@ export function readValidPairSetFromFile(): Set<string> | null {
   }
 }
 
+/** Writes the valid team-pair set to `data/valid-pairs.json`. */
 export function writeValidPairsFile(set: Set<string>): void {
   const p = getValidPairsJsonPath();
   fs.mkdirSync(path.dirname(p), { recursive: true });
