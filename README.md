@@ -1,6 +1,6 @@
 # Football Grid
 
-NFL “two teams” tic-tac-toe: **Next.js** (`frontend/`) + **Express + Prisma** (`backend/`) + **PostgreSQL** (`docker-compose.yml`).
+NFL tic-tac-toe: **Next.js** (`frontend/`) + **Express + Prisma** (`backend/`) + **PostgreSQL** (`docker-compose.yml`).
 
 ## Docker quick start
 
