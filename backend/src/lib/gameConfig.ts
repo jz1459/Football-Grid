@@ -2,15 +2,15 @@ import { existsSync, readFileSync } from "fs";
 import { isAbsolute, join, resolve } from "path";
 
 /**
- * Single source of truth for roster seasons and seed behavior. Default path: repo `config/game.json`
+ * Single source of truth for roster seasons and load behavior. Default path: repo `config/game.json`
  * (three levels above `dist/lib` or `src/lib`). Override with env `GAME_CONFIG_PATH` (absolute or relative to `process.cwd()`).
  */
 export type GameConfigFile = {
   rosterSeason: { start: number; end: number };
   /** If non-empty, these exact seasons are used instead of `rosterSeason` range. */
   rosterSeasonYears: number[] | null;
-  seed: {
-    seedAllNflTeams: boolean;
+  load: {
+    loadAllNflteams: boolean;
     testTeamAbbrevs: string[];
   };
   loadDataPauseMs: number;
@@ -71,16 +71,16 @@ function parseAndValidate(raw: unknown): GameConfigFile {
     });
   }
 
-  const seed = o.seed;
-  if (seed === null || typeof seed !== "object") {
-    throw new Error("game.json: missing or invalid `seed` object");
+  const load = o.load;
+  if (load === null || typeof load !== "object") {
+    throw new Error("game.json: missing or invalid `load` object");
   }
-  const so = seed as Record<string, unknown>;
-  if (typeof so.seedAllNflTeams !== "boolean") {
-    throw new Error("game.json: `seed.seedAllNflTeams` must be a boolean");
+  const so = load as Record<string, unknown>;
+  if (typeof so.loadAllNflteams !== "boolean") {
+    throw new Error("game.json: `load.loadAllNflteams` must be a boolean");
   }
   if (!Array.isArray(so.testTeamAbbrevs)) {
-    throw new Error("game.json: `seed.testTeamAbbrevs` must be an array of strings");
+    throw new Error("game.json: `load.testTeamAbbrevs` must be an array of strings");
   }
   const testTeamAbbrevs = so.testTeamAbbrevs.map((a, i) => {
     if (typeof a !== "string") throw new Error(`game.json: testTeamAbbrevs[${i}] must be a string`);
@@ -98,7 +98,7 @@ function parseAndValidate(raw: unknown): GameConfigFile {
   return {
     rosterSeason: { start: Math.floor(rso.start), end: Math.floor(rso.end) },
     rosterSeasonYears,
-    seed: { seedAllNflTeams: so.seedAllNflTeams, testTeamAbbrevs },
+    load: { loadAllNflteams: so.loadAllNflteams, testTeamAbbrevs },
     loadDataPauseMs,
   };
 }

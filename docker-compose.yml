@@ -3,25 +3,22 @@
 #   ./start.sh
 #   # or: docker compose up -d --build
 #
-# Then load roster data (see `backend/README.md` → Docker).
-#
-# The UI is built with NEXT_PUBLIC_API_URL=http://localhost:5001 so the browser
-# (on your machine) talks to the published API port. If you open the app via a
-# non-localhost host, rebuild with a matching build arg (see frontend service).
+# Then load roster data (see `backend/README.md`)
+
 
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: apppass
-      POSTGRES_DB: football_grid
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d football_grid"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -32,7 +29,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     environment:
-      DATABASE_URL: postgresql://app:apppass@postgres:5432/football_grid
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PORT: "5001"
     ports:
       - "5001:5001"

@@ -11,11 +11,11 @@ model Player {
   id         Int    @id @default(autoincrement())
   name       String @db.VarChar(40)
   position   String @db.VarChar(10)
-  // nflverse gsis_id — one row per NFL player when set (avoids DL/LB split rows).
+  // nflverse gsis_id — identity for load_data; optional for legacy rows. No @@unique on (name, position):
+  // different players can share the same display name + grid bucket (e.g. two "Mike Williams" WR).
   gsisId     String? @unique @map("gsis_id") @db.VarChar(32)
   playerTeams PlayerTeam[]
 
-  @@unique([name, position], name: "player_unique")
   @@map("players")
 }
 

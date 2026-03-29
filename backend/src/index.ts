@@ -33,9 +33,9 @@ app.get("/config", (_req, res) => {
     res.json({
       rosterSeasonRange,
       rosterSeasonYears,
-      seed: {
-        seedAllNflTeams: gc.seed.seedAllNflTeams,
-        testTeamAbbrevs: gc.seed.testTeamAbbrevs,
+      load: {
+        loadAllNflteams: gc.load.loadAllNflteams,
+        testTeamAbbrevs: gc.load.testTeamAbbrevs,
       },
     });
   } catch (e) {

@@ -4,8 +4,8 @@
     "end": 2025
   },
   "rosterSeasonYears": null,
-  "seed": {
-    "seedAllNflTeams": true,
+  "load": {
+    "loadAllNflteams": true,
     "testTeamAbbrevs": ["NYG", "BUF"]
   },
   "loadDataPauseMs": 200

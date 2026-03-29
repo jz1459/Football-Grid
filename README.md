@@ -4,23 +4,27 @@ NFL “two teams” tic-tac-toe: **Next.js** (`frontend/`) + **Express + Prisma*
 
 ## Docker quick start
 
-1. **`backend/.env`** — copy from `backend/.env.example` and set `DATABASE_URL`. For the default compose Postgres on your machine:
+1. **Repository root `.env`** — copy [`.env.example`](.env.example) to `.env`. Set `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` (Compose substitutes these into `docker-compose.yml`; nothing is hardcoded there).
 
-   `postgresql://app:apppass@localhost:5432/football_grid`
+2. **`backend/.env`** — copy from `backend/.env.example` and set `DATABASE_URL` to the same database on your machine, for example:
 
-2. Start stack:
+   `postgresql://POSTGRES_USER:POSTGRES_PASSWORD@localhost:5432/POSTGRES_DB`
+
+   (Use the same values as in the root `.env`.)
+
+3. Start stack:
 
    ```bash
    ./start.sh
    ```
 
-3. Load nflverse roster data (reads **`backend/.env`**; run after Postgres is up):
+4. Load nflverse roster data (reads **`backend/.env`**; run after Postgres is up):
 
    ```bash
    ./load_data.sh
    ```
 
-4. Stop:
+5. Stop:
 
    ```bash
    ./stop.sh

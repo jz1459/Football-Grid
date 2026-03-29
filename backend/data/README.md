@@ -1,12 +1,12 @@
 # Data loading (nflverse → Postgres)
 
-- **`positions.ts`** — NFL position abbreviations → Football Grid buckets (`POSITION_ABBREV_TO_GRID`) and `seasonRangeInclusive()` for seed loops.
+- **`positions.ts`** — NFL position abbreviations → Football Grid buckets (`POSITIONS`) and `seasonRangeInclusive()` for seed loops.
 - **`nflverse.ts`** — Fetches nflverse roster CSVs (same files as R `nflreadr::load_rosters`) + team metadata CSV for abbrev → display name.
-- **`load_data.ts`** — Prisma seed (`npm run db:load_data` or repo root `./load_data.sh`). Uses `gsis_id` when present so one `Player` row per NFL player (avoids DL/LB duplicates). After schema changes, run `npm run db:push` then re-seed if you want a clean table; the API still merges teams for the same GSIS across duplicate rows. On success it overwrites **`valid-pairs.json`** (committed in git — **commit updates** after changing seasons or roster logic so clones stay in sync).
+- **`load_data.ts`** — Prisma seed (`npm run db:load_data` or repo root `./load_data.sh`). One `Player` row per nflverse `gsis_id` (`upsert` on `gsisId`); roster rows with empty `gsis_id` are skipped (count logged per season). After schema changes, run `npm run db:push` then re-seed for a clean table. On success it overwrites **`valid-pairs.json`** (committed in git — **commit updates** after changing seasons or roster logic so clones stay in sync).
 
 **Env:** only `DATABASE_URL` in **`../.env`** (project root `backend/.env`).
 
-**Seasons:** edit `SEASON_YEARS` and/or `SEASON_RANGE` at the top of `load_data.ts`. A range unions everyone who appeared on a team in any of those years (no `season` column in the DB).
+**Seasons:** repo **`config/game.json`** (`rosterSeason` / `rosterSeasonYears`). A range unions everyone who appeared on a team in any of those years (no `season` column in the DB).
 
 ```bash
 cd backend

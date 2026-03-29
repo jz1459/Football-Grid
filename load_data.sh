@@ -1,3 +1,6 @@
+# This script is used to load the data into the database, it is used to populate the database with the data from the nflverse.
+# The relevant parameters are set in the config/game.json file.
+
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"

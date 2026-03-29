@@ -1,8 +1,8 @@
 /**
- * NFL roster position abbreviations (nflverse / common NFL usage) → Football Grid buckets.
+ * Normalized NFL roster positions.
  */
 
-export const POSITION_ABBREV_TO_GRID: Record<string, string> = {
+export const POSITIONS: Record<string, string> = {
   QB: "QB",
   RB: "RB",
   FB: "FB",

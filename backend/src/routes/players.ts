@@ -103,8 +103,19 @@ export async function validateHandler(req: Request, res: Response): Promise<void
     return;
   }
 
-  /** Homonyms: same display name, different people — require position from the suggestion. */
-  if (positions.length === 0) {
+  /**
+   * Homonyms: same display name, different people. If multiple `Player` rows match, require enough
+   * context to pick one — different positions, or a single row after filtering.
+   */
+  const distinctPlayers = new Set(nameMatches.map((p) => p.id));
+  if (distinctPlayers.size > 1) {
+    if (positions.length > 0) {
+      res.status(400).json({
+        error:
+          "Multiple players match this name and position; pick a different suggestion or search again.",
+      });
+      return;
+    }
     const distinctPos = new Set(nameMatches.map((p) => p.position));
     if (distinctPos.size > 1) {
       res.status(400).json({
@@ -112,6 +123,11 @@ export async function validateHandler(req: Request, res: Response): Promise<void
       });
       return;
     }
+    res.status(400).json({
+      error:
+        "Multiple NFL players share this name and position; pick a suggestion that lists them distinctly, or refine your search.",
+    });
+    return;
   }
 
   const teamSet = new Set<string>();
